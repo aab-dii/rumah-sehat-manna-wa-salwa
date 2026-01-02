@@ -248,6 +248,19 @@ class MainActivity : ComponentActivity() {
                              }
                         }
                     }
+
+                    // --- Rute Terapis ---
+                    composable("therapist_home") {
+                        com.android.rumahsehatmannawasalwa.ui.screens.therapist.home.TherapistHomeScreen(navController)
+                    }
+                    
+                    composable("therapist_appointment") {
+                        com.android.rumahsehatmannawasalwa.ui.screens.therapist.appointment.TherapistAppointmentScreen(navController)
+                    }
+                    
+                    composable("therapist_schedule") {
+                        com.android.rumahsehatmannawasalwa.ui.screens.therapist.schedule.TherapistScheduleScreen(navController)
+                    }
                 }
             }
         }
