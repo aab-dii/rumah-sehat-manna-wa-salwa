@@ -201,9 +201,17 @@ class MainActivity : ComponentActivity() {
                         )
                     }
 
-                    // Halaman Profil
+                    // Halaman Profil (Menu Utama)
                     composable("profile") {
                         ProfileScreen(navController, authViewModel)
+                    }
+
+                    // Halaman Detail Profil (Edit/View Detail)
+                    composable("profile_detail") {
+                         com.android.rumahsehatmannawasalwa.ui.screens.profile.ProfileDetailScreen(
+                             navController = navController, 
+                             viewModel = authViewModel
+                         )
                     }
 
                     // Halaman Lengkapi Data (Complete Profile)
