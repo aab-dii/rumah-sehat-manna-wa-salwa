@@ -8,8 +8,7 @@ import retrofit2.converter.gson.GsonConverterFactory
 import java.util.concurrent.TimeUnit
 
 object RetrofitClient {
-    // URL Backend diambil dari BuildConfig (diatur di build.gradle.kts)
-    // Default Emulator: http://10.0.2.2:8000/api/
+   
     private const val BASE_URL = BuildConfig.BASE_URL
 
     var authToken: String? = null

@@ -1,166 +1,258 @@
 package com.android.rumahsehatmannawasalwa.ui.screens.profile
 
+import androidx.compose.foundation.BorderStroke
 import com.android.rumahsehatmannawasalwa.ui.viewmodel.auth.AuthViewModel
-import com.android.rumahsehatmannawasalwa.data.model.auth.User
 import com.android.rumahsehatmannawasalwa.ui.components.BottomNavigationBar
+import com.android.rumahsehatmannawasalwa.ui.theme.*
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ExitToApp
+import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.ExitToApp
+import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import androidx.navigation.compose.rememberNavController
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ProfileScreen(navController: NavController, viewModel: AuthViewModel) {
-    // Ambil data user dari ViewModel
-    val userDataState = viewModel.currentUserData.collectAsState()
-    val userData = userDataState.value
+fun ProfileScreen(
+    navController: NavController,
+    viewModel: AuthViewModel
+) {
+    // Collect User Data
+    val user by viewModel.currentUserData.collectAsState()
+    val authState by viewModel.authState.collectAsState()
 
-    // Panggil fungsi fetch data saat halaman dibuka
+    // Fetch on Init
     LaunchedEffect(Unit) {
         viewModel.fetchUserProfile()
     }
 
+    // State
+    var isNotificationEnabled by remember { mutableStateOf(true) }
+
     Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Profil Saya") },
-                navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Kembali")
-                    }
-                },
-                actions = {
-                    // Tombol Logout di pojok kanan atas
-                    IconButton(onClick = {
-                        viewModel.logout()
-                        // Arahkan kembali ke Login dan hapus history
-                        navController.navigate("login") {
-                            popUpTo(0) { inclusive = true }
-                        }
-                    }) {
-                        Icon(Icons.Default.ExitToApp, contentDescription = "Logout", tint = Color.Red)
-                    }
-                }
-            )
-        },
+        containerColor = Color(0xFFEFEFEF), // #FAFFF9
         bottomBar = {
             BottomNavigationBar(navController = navController)
         }
-    ) { padding ->
+    ) { paddingValues ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding)
-                .verticalScroll(rememberScrollState()),
-            horizontalAlignment = Alignment.CenterHorizontally
+                .padding(paddingValues)
         ) {
-            Spacer(modifier = Modifier.height(20.dp))
-
-            // --- Foto Profil (Placeholder) ---
-            Surface(
-                modifier = Modifier.size(100.dp),
-                shape = CircleShape,
-                color = MaterialTheme.colorScheme.primaryContainer
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Person,
-                    contentDescription = "Foto Profil",
-                    modifier = Modifier.padding(20.dp),
-                    tint = MaterialTheme.colorScheme.onPrimaryContainer
-                )
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Nama User (Judul Besar)
-            Text(
-                text = userData?.name ?: "Memuat Nama...",
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold
-            )
-            Text(
-                text = userData?.role?.capitalize() ?: "-",
-                style = MaterialTheme.typography.bodyMedium,
-                color = Color.Gray
-            )
-
-            Spacer(modifier = Modifier.height(32.dp))
-
-            // --- Card Informasi Detail ---
-            Card(
+            // --- 1. Custom Header (Full Width) ---
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
-                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-                colors = CardDefaults.cardColors(containerColor = Color(0xFFF5F5F5)) // Warna abu muda
+                    .background(Color.White) // Atau GreenPrimary.copy(alpha=0.1f) untuk ijo pudar
+                    .padding(vertical = 32.dp, horizontal = 24.dp),
+                contentAlignment = Alignment.Center
             ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    ProfileItem(label = "Email", value = userData?.email)
-                    Divider(modifier = Modifier.padding(vertical = 8.dp))
-
-                    ProfileItem(label = "Nomor WhatsApp", value = userData?.phoneNumber)
-                    Divider(modifier = Modifier.padding(vertical = 8.dp))
-
-                    ProfileItem(label = "Pekerjaan", value = userData?.job)
-                    Divider(modifier = Modifier.padding(vertical = 8.dp))
-
-                    ProfileItem(label = "Tanggal Lahir", value = userData?.birthDate)
-                    Divider(modifier = Modifier.padding(vertical = 8.dp))
-
-                    ProfileItem(label = "Jenis Kelamin", value = userData?.gender)
-                    Divider(modifier = Modifier.padding(vertical = 8.dp))
-
-                    ProfileItem(label = "Alamat", value = userData?.address)
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    // Avatar
+                    Surface(
+                        shape = CircleShape,
+                        color = BackgroundLight, // Hijau sangat muda
+                        border = BorderStroke(2.dp, GreenPrimary),
+                        modifier = Modifier.size(100.dp)
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                imageVector = Icons.Default.Person,
+                                contentDescription = "Avatar",
+                                tint = GreenPrimary,
+                                modifier = Modifier.size(50.dp)
+                            )
+                        }
+                    }
+                    
+                    Spacer(modifier = Modifier.height(16.dp))
+                    
+                    // Nama & Email
+                    Text(
+                        text = user?.name ?: "Pengguna",
+                        style = MaterialTheme.typography.headlineSmall, // H2/H3
+                        fontWeight = FontWeight.Bold,
+                        color = Color.Black
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = user?.email ?: "Memuat...",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color.Gray
+                    )
+                     Text(
+                        text = user?.phoneNumber ?: "",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color.Gray
+                    )
                 }
             }
+            
+            Divider(color = DividerColor, thickness = 1.dp)
 
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // Tombol Edit (Opsional, nanti disambung ke fitur edit)
-            Button(
-                onClick = { /* TODO: Navigasi ke Edit Profil */ },
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)
+            // --- 2. Menu Options ---
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f) // Isi sisa space
+                    .padding(top = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Text("Ubah Profil")
-            }
+                // Item 1: Ubah Profil -> Navigasi ke ProfileDetail (Halaman Lama)
+                item {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(containerColor = Color.White),
+                        shape = RectangleShape
+                    ) {
+                        Column {
+                            // Data Pribadi
+                            ProfileMenuItem(
+                                icon = Icons.Default.Person,
+                                title = "Data Pribadi",
+                                onClick = { navController.navigate("profile_detail") }
+                            )
+                            // Garis Pemisah
+                            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), thickness = 0.5.dp, color = Color.LightGray)
+                            // Keamanan
+                            ProfileMenuItem(
+                                icon = Icons.Default.Lock,
+                                title = "Ubah Kata Sandi",
+                                onClick = { /* TODO: Navigate to Password Change */ }
+                            )
+                        }
+                    }
+                }
 
-            Spacer(modifier = Modifier.height(24.dp))
+                // Item 2: Notifikasi -> Toggle
+                item {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(containerColor = Color.White),
+                        shape = RectangleShape
+                    ) {
+                        ProfileMenuItem(
+                            icon = Icons.Default.Notifications,
+                            title = "Notifikasi Aplikasi",
+                            onClick = { isNotificationEnabled = !isNotificationEnabled },
+                            endWidget = {
+                                Switch(
+                                    checked = isNotificationEnabled,
+                                    onCheckedChange = { isNotificationEnabled = it },
+                                    colors = SwitchDefaults.colors(
+                                        checkedThumbColor = Color.White,
+                                        checkedTrackColor = GreenPrimary,
+                                        uncheckedThumbColor = Color.LightGray,
+                                        uncheckedTrackColor = Color.Transparent
+                                    ),
+                                    modifier = Modifier.scale(0.8f)
+                                )
+                            }
+                        )
+                    }
+                }
+
+                // Item 4: Logout -> Special Style
+                item {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(containerColor = Color.White),
+                        shape = RectangleShape
+                    ) {
+                        ProfileMenuItem(
+                            icon = Icons.AutoMirrored.Filled.ExitToApp,
+                            title = "Keluar Akun",
+                            showChevron = true,
+                            onClick = {
+                                viewModel.logout()
+                                navController.navigate("login") {
+                                    popUpTo(0) { inclusive = true }
+                                }
+                            }
+                        )
+                    }
+                }
+            }
         }
     }
 }
 
-// Komponen Kecil untuk Baris Data
 @Composable
-fun ProfileItem(label: String, value: String?) {
-    Column {
-        Text(text = label, fontSize = 12.sp, color = Color.Gray)
-        Spacer(modifier = Modifier.height(4.dp))
-        Text(
-            text = if (value.isNullOrBlank()) "-" else value,
-            fontSize = 16.sp,
-            fontWeight = FontWeight.Medium,
-            color = Color.Black
+fun ProfileMenuItem(
+    icon: ImageVector,
+    title: String,
+    onClick: () -> Unit,
+    textColor: Color = Color.Black,
+    iconColor: Color = GreenPrimary,
+    showChevron: Boolean = true,
+    endWidget: @Composable (() -> Unit)? = null
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(horizontal = 24.dp)
+            .heightIn(min = 64.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        // Left Icon
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = iconColor,
+            modifier = Modifier.size(24.dp)
         )
+        
+        Spacer(modifier = Modifier.width(16.dp))
+        
+        // Title
+        Text(
+            text = title,
+            style = MaterialTheme.typography.bodyLarge,
+            fontWeight = FontWeight.Medium,
+            color = textColor,
+            modifier = Modifier.weight(1f)
+        )
+        
+        // End Widget (Switch or Chevron)
+        if (endWidget != null) {
+            endWidget()
+        } else if (showChevron) {
+            Icon(
+                imageVector = Icons.Default.ChevronRight,
+                contentDescription = null,
+                tint = Color.Gray
+            )
+        }
     }
 }
 
-// Extension function kecil untuk kapitalisasi huruf pertama
-fun String.capitalize(): String {
-    return this.replaceFirstChar { it.uppercase() }
+@Preview(showBackground = true)
+@Composable
+fun ProfileScreenPreview() {
+    // Preview Only
 }
