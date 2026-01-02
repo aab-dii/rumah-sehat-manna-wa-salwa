@@ -37,6 +37,10 @@ fun DispatchScreen(
                 navController.navigate("admin_home") {
                     popUpTo("dispatch") { inclusive = true }
                 }
+            } else if (user?.role == "therapist" || user?.role == "terapis") {
+                navController.navigate("therapist_home") {
+                    popUpTo("dispatch") { inclusive = true }
+                }
             } else {
                 // Check if profile is complete (Auto-Registered users have "-" or empty fields)
                 if (user?.phoneNumber == "-" || user?.job == "-" || user?.address == "-" ||
