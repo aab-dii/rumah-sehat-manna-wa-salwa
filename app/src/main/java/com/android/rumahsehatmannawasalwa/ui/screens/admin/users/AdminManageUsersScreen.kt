@@ -1,106 +1,257 @@
 package com.android.rumahsehatmannawasalwa.ui.screens.admin.users
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.paging.LoadState
+import androidx.paging.compose.LazyPagingItems
 import androidx.paging.compose.collectAsLazyPagingItems
-import com.android.rumahsehatmannawasalwa.ui.screens.admin.home.UserCard
+import com.android.rumahsehatmannawasalwa.data.model.auth.User
 import com.android.rumahsehatmannawasalwa.ui.viewmodel.user.AdminUserViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AdminManageUsersScreen(
     navController: NavController,
-    viewModel: AdminUserViewModel = viewModel()
+    viewModel: AdminUserViewModel = viewModel(),
+    onUserClick: (Int) -> Unit,
+    onAddUserClick: () -> Unit // New Parameter
 ) {
     // Tab State: 0 = Pasien, 1 = Terapis
     var selectedTabIndex by remember { mutableStateOf(0) }
-    
-    // Update ViewModel when tab changes
-    LaunchedEffect(selectedTabIndex) {
-        val role = if (selectedTabIndex == 0) "pasien" else "terapis"
-        viewModel.setRoleFilter(role)
-    }
 
-    val userPagingItems = viewModel.userPager.collectAsLazyPagingItems()
+    // Collect BOTH pagers to keep their state alive
+    val patientPagingItems = viewModel.patientPager.collectAsLazyPagingItems()
+    val therapistPagingItems = viewModel.therapistPager.collectAsLazyPagingItems()
+    val searchQuery by viewModel.searchQuery.collectAsState()
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color(0xFFF9F9F9))
-    ) {
-        // Tab Row
-        TabRow(
-            selectedTabIndex = selectedTabIndex,
-            containerColor = Color.White,
-            contentColor = MaterialTheme.colorScheme.primary,
-            indicator = { tabPositions ->
-                TabRowDefaults.SecondaryIndicator(
-                    Modifier.tabIndicatorOffset(tabPositions[selectedTabIndex]),
-                    color = MaterialTheme.colorScheme.primary
+    Scaffold(
+        floatingActionButton = {
+            FloatingActionButton(
+                onClick = onAddUserClick,
+                containerColor = com.android.rumahsehatmannawasalwa.ui.theme.GreenPrimary,
+                contentColor = Color.White
+            ) {
+                Icon(Icons.Default.Add, contentDescription = "Tambah User")
+            }
+        },
+        containerColor = Color.Transparent // Allow background to show through if any
+    ) { paddingValues ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color(0xFFF9F9F9))
+                .padding(paddingValues) 
+        ) {
+            // --- Search Bar ---
+            OutlinedTextField(
+                value = searchQuery,
+                onValueChange = { viewModel.onSearchQueryChanged(it) },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                placeholder = { Text("Cari pengguna berdasarkan nama...") },
+                leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Search") },
+                shape = RoundedCornerShape(12.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedContainerColor = Color.White,
+                    unfocusedContainerColor = Color.White
+                ),
+                singleLine = true
+            )
+
+            // Tab Row
+            TabRow(
+                selectedTabIndex = selectedTabIndex,
+                containerColor = Color.White,
+                contentColor = com.android.rumahsehatmannawasalwa.ui.theme.GreenPrimary,
+                indicator = { tabPositions ->
+                    TabRowDefaults.SecondaryIndicator(
+                        Modifier.tabIndicatorOffset(tabPositions[selectedTabIndex]),
+                        color = com.android.rumahsehatmannawasalwa.ui.theme.GreenPrimary
+                    )
+                }
+            ) {
+                Tab(
+                    selected = selectedTabIndex == 0,
+                    onClick = { selectedTabIndex = 0 },
+                    text = { Text("Pasien") },
+                    selectedContentColor = com.android.rumahsehatmannawasalwa.ui.theme.GreenPrimary,
+                    unselectedContentColor = Color.Gray
+                )
+                Tab(
+                    selected = selectedTabIndex == 1,
+                    onClick = { selectedTabIndex = 1 },
+                    text = { Text("Terapis") },
+                    selectedContentColor = com.android.rumahsehatmannawasalwa.ui.theme.GreenPrimary,
+                    unselectedContentColor = Color.Gray
                 )
             }
-        ) {
-            Tab(
-                selected = selectedTabIndex == 0,
-                onClick = { selectedTabIndex = 0 },
-                text = { Text("Pasien") }
-            )
-            Tab(
-                selected = selectedTabIndex == 1,
-                onClick = { selectedTabIndex = 1 },
-                text = { Text("Terapis") }
-            )
-        }
 
-        // List Content
-        if (userPagingItems.loadState.refresh is LoadState.Loading) {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator()
+            // Content
+            if (selectedTabIndex == 0) {
+                UserListContent(
+                    userPagingItems = patientPagingItems,
+                    onUserClick = { user ->
+                        viewModel.selectUser(user)
+                        onUserClick(user.id)
+                    }
+                )
+            } else {
+                UserListContent(
+                    userPagingItems = therapistPagingItems,
+                    onUserClick = { user ->
+                        viewModel.selectUser(user)
+                        onUserClick(user.id)
+                    }
+                )
             }
-        } else {
-            LazyColumn(
-                contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.fillMaxSize()
+        }
+    }
+}
+
+@Composable
+fun UserListContent(
+    userPagingItems: LazyPagingItems<User>,
+    onUserClick: (User) -> Unit // <--- PARAMETER INI DITAMBAHKAN
+) {
+    if (userPagingItems.loadState.refresh is LoadState.Loading) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            CircularProgressIndicator()
+        }
+    } else {
+        LazyColumn(
+            contentPadding = PaddingValues(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.fillMaxSize()
+        ) {
+            items(userPagingItems.itemCount) { index ->
+                val user = userPagingItems[index]
+                if (user != null) {
+                    UserCard(
+                        user = user,
+                        onClick = { onUserClick(user) } // <--- Pass user ke callback
+                    )
+                }
+            }
+
+            if (userPagingItems.loadState.append is LoadState.Loading) {
+                item {
+                    Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator()
+                    }
+                }
+            }
+
+            if (userPagingItems.itemCount == 0 && userPagingItems.loadState.refresh !is LoadState.Loading) {
+                item {
+                    Box(modifier = Modifier.fillParentMaxSize(), contentAlignment = Alignment.Center) {
+                        Text("Tidak ada data pengguna.", color = Color.Gray)
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun UserCard(
+    user: User,
+    onClick: () -> Unit
+) {
+    Card(
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        shape = RoundedCornerShape(12.dp),
+        elevation = CardDefaults.cardElevation(2.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() }
+    ) {
+        Row(
+            modifier = Modifier
+                .padding(16.dp)
+                .fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // 1. Avatar (AsyncImage with UI Avatars)
+            Surface(
+                shape = androidx.compose.foundation.shape.CircleShape,
+                modifier = Modifier.size(50.dp),
+                color = com.android.rumahsehatmannawasalwa.ui.theme.GreenContainer
             ) {
-                items(userPagingItems.itemCount) { index ->
-                    val user = userPagingItems[index]
-                    if (user != null) {
-                        UserCard(user)
-                    }
-                }
-                
-                if (userPagingItems.loadState.append is LoadState.Loading) {
-                    item {
-                        Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                            CircularProgressIndicator()
-                        }
-                    }
-                }
-                
-                if (userPagingItems.itemCount == 0 && userPagingItems.loadState.refresh !is LoadState.Loading) {
-                    item {
-                        Box(modifier = Modifier.fillParentMaxSize(), contentAlignment = Alignment.Center) {
-                            Text("Tidak ada data pengguna.", color = Color.Gray)
-                        }
-                    }
+                if (user.name.isNotEmpty()) {
+                    coil.compose.AsyncImage(
+                        model = "https://ui-avatars.com/api/?name=${user.name}&background=random&size=128",
+                        contentDescription = "Foto ${user.name}",
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = androidx.compose.ui.layout.ContentScale.Crop
+                    )
+                } else {
+                     Icon(
+                        imageVector = Icons.Default.AccountCircle,
+                        contentDescription = null,
+                        modifier = Modifier.padding(8.dp),
+                        tint = com.android.rumahsehatmannawasalwa.ui.theme.GreenPrimary
+                    )
                 }
             }
+
+            Spacer(modifier = Modifier.width(16.dp))
+
+            // 2. Info User (Nama, Email, No HP)
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.Center
+            ) {
+                // A. Nama (Tebal & Jelas)
+                Text(
+                    text = user.name,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = com.android.rumahsehatmannawasalwa.ui.theme.TextPrimary,
+                    maxLines = 1
+                )
+
+                // B. Email
+                Text(
+                    text = user.email,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = com.android.rumahsehatmannawasalwa.ui.theme.TextSecondary,
+                    maxLines = 1
+                )
+
+                // C. No HP
+                if (!user.phoneNumber.isNullOrEmpty()) {
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = user.phoneNumber ?: "-",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = com.android.rumahsehatmannawasalwa.ui.theme.TextSecondary
+                    )
+                }
+            }
+
+            // 3. Icon Chevron
+            Icon(
+                imageVector = Icons.Default.ChevronRight,
+                contentDescription = "Detail",
+                tint = com.android.rumahsehatmannawasalwa.ui.theme.GreenPrimary,
+                modifier = Modifier.size(24.dp)
+            )
         }
     }
 }

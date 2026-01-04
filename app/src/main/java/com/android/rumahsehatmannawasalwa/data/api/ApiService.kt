@@ -50,8 +50,12 @@ interface ApiService {
     suspend fun getUsers(
         @Query("page") page: Int,
         @Query("role") role: String? = null,
+        @Query("search") search: String? = null,
         @Query("limit") limit: Int = 10
     ): Response<UserListResponse>
+
+    @DELETE("users/{id}")
+    suspend fun deleteUser(@Path("id") id: Int): Response<Any>
 
     @POST("bookings")
     suspend fun createBooking(@Body request: BookingRequest): Response<Any>

@@ -119,7 +119,8 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
             firebaseUid = uid,
             pekerjaan = job,
             alamat = address,
-            tglLahir = birthDate
+            tglLahir = birthDate,
+            jenisKelamin = "-"
         )
 
         viewModelScope.launch {
@@ -173,22 +174,7 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
     // Fungsi Privat untuk sync user Google ke Backend Laravel
     private fun checkAndSaveUserToFirestore(firebaseUser: com.google.firebase.auth.FirebaseUser) {
         val uid = firebaseUser.uid
-        val docRef = db.collection("users").document(uid)
         Log.d("AuthViewModel", "Checking Firestore for Google User UID: $uid")
-
-        // 1. Simpan ke Firestore (Minimal Copy)
-        docRef.get().addOnSuccessListener { document ->
-            if (!document.exists()) {
-                val newUser = User(
-                    firebaseUid = uid,
-                    name = firebaseUser.displayName ?: "User Google",
-                    email = firebaseUser.email ?: "",
-                    phoneNumber = firebaseUser.phoneNumber ?: "",
-                    role = "pasien"
-                )
-                docRef.set(newUser)
-            }
-        }
         
         // 2. SYNC KE BACKEND LARAVEL
         // Cek apakah user sudah ada di database Laravel?
@@ -212,13 +198,14 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
                         val registerRequest = RegisterRequest(
                             namaLengkap = firebaseUser.displayName ?: "Google User",
                             email = firebaseUser.email ?: "",
-                            password = "GoogleLoginDefault123!", // Password default aman
+                            password = "RumahSehat123", // Password default aman
                             noHp = firebaseUser.phoneNumber ?: "-",
                             role = "pasien",
                             firebaseUid = uid,
                             pekerjaan = "-", // Default dummy
                             alamat = "-", // Default dummy
-                            tglLahir = "2000-01-01" // Default dummy
+                            tglLahir = "2000-01-01", // Default dummy
+                            jenisKelamin = "-"
                         )
                         val regResponse = RetrofitClient.instance.registerUser(registerRequest)
                         if (regResponse.isSuccessful) {
