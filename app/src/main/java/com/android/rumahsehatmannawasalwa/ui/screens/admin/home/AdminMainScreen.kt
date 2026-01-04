@@ -14,6 +14,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -24,12 +25,18 @@ import com.android.rumahsehatmannawasalwa.ui.navigation.DrawerItems
 import com.android.rumahsehatmannawasalwa.ui.screens.admin.bookings.AdminBookingScreen
 import com.android.rumahsehatmannawasalwa.ui.screens.admin.bookings.AppointmentDetailScreen
 import com.android.rumahsehatmannawasalwa.ui.screens.admin.users.AdminManageUsersScreen
+import com.android.rumahsehatmannawasalwa.ui.screens.admin.users.AdminUserDetailScreen
+import com.android.rumahsehatmannawasalwa.ui.viewmodel.user.AdminUserViewModel
+import com.google.firebase.auth.ktx.auth
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AdminMainScreen(
-    onLogout: () -> Unit
+    onLogout: () -> Unit,
+    adminUserViewModel: AdminUserViewModel,
+    onUserClick: (Int) -> Unit,
+    onAddUserClick: () -> Unit
 ) {
     val navController = rememberNavController()
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
@@ -49,16 +56,22 @@ fun AdminMainScreen(
         else -> "Admin Dashboard"
     }
 
+    // Get current user for Drawer Header
+    val currentUser = com.google.firebase.ktx.Firebase.auth.currentUser
+    val photoUrl = currentUser?.photoUrl
+
     ModalNavigationDrawer(
         drawerState = drawerState,
         drawerContent = {
-            ModalDrawerSheet {
+            ModalDrawerSheet(
+                drawerContainerColor = Color.White
+            ) {
                 // Header Drawer
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(180.dp)
-                        .background(MaterialTheme.colorScheme.primary),
+                        .background(com.android.rumahsehatmannawasalwa.ui.theme.GreenPrimary), // Use GreenPrimary
                     contentAlignment = Alignment.CenterStart
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
@@ -67,24 +80,33 @@ fun AdminMainScreen(
                             color = Color.White,
                             modifier = Modifier.size(64.dp)
                         ) {
-                            Box(contentAlignment = Alignment.Center) {
-                                Text(
-                                    text = "A",
-                                    style = MaterialTheme.typography.headlineMedium,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.primary
+                            if (photoUrl != null) {
+                                coil.compose.AsyncImage(
+                                    model = photoUrl,
+                                    contentDescription = "Admin Photo",
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentScale = androidx.compose.ui.layout.ContentScale.Crop
                                 )
+                            } else {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Text(
+                                        text = currentUser?.displayName?.firstOrNull()?.toString()?.uppercase() ?: "A",
+                                        style = MaterialTheme.typography.headlineMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        color = com.android.rumahsehatmannawasalwa.ui.theme.GreenPrimary
+                                    )
+                                }
                             }
                         }
                         Spacer(modifier = Modifier.height(12.dp))
                         Text(
-                            text = "Admin Klinik",
+                            text = currentUser?.displayName ?: "Admin Klinik",
                             style = MaterialTheme.typography.titleMedium,
                             color = Color.White,
                             fontWeight = FontWeight.Bold
                         )
                         Text(
-                            text = "Administrator",
+                            text = currentUser?.email ?: "Administrator",
                             style = MaterialTheme.typography.bodyMedium,
                             color = Color.White.copy(alpha = 0.8f)
                         )
@@ -95,25 +117,39 @@ fun AdminMainScreen(
 
                 // Menu Items
                 DrawerItems.forEach { item ->
+                    val isSelected = currentRoute == item.route
                     NavigationDrawerItem(
-                        icon = { Icon(item.icon, contentDescription = null) },
-                        label = { Text(item.title) },
-                        selected = currentRoute == item.route,
+                        icon = { 
+                            Icon(
+                                item.icon, 
+                                contentDescription = null, 
+                                tint = if (isSelected) com.android.rumahsehatmannawasalwa.ui.theme.GreenPrimary else Color.Gray 
+                            ) 
+                        },
+                        label = { 
+                            Text(
+                                item.title, 
+                                color = if (isSelected) com.android.rumahsehatmannawasalwa.ui.theme.GreenPrimary else Color.Black
+                            ) 
+                        },
+                        selected = isSelected,
+                        colors = NavigationDrawerItemDefaults.colors(
+                            selectedContainerColor = com.android.rumahsehatmannawasalwa.ui.theme.GreenContainer,
+                            unselectedContainerColor = Color.Transparent
+                        ),
                         onClick = {
                             scope.launch { drawerState.close() }
                             navController.navigate(item.route) {
-                                // Pop up to the start destination of the graph to
-                                // avoid building up a large stack of destinations
                                 popUpTo(navController.graph.findStartDestination().id) {
                                     saveState = true
                                 }
-                                // Avoid multiple copies of the same destination
                                 launchSingleTop = true
-                                // Restore state when reselecting a previously selected item
                                 restoreState = true
                             }
                         },
-                        modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
+                        modifier = Modifier
+                            .padding(NavigationDrawerItemDefaults.ItemPadding)
+                            .padding(end = 12.dp)
                     )
                 }
                 
@@ -142,12 +178,13 @@ fun AdminMainScreen(
                         }
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.primaryContainer,
-                        titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                        containerColor = com.android.rumahsehatmannawasalwa.ui.theme.GreenPrimary, // Header Hijau
+                        titleContentColor = Color.White,
+                        navigationIconContentColor = Color.White,
+                        actionIconContentColor = Color.White
                     )
                 )
-            },
-            // BottomBar removed as requested
+            }
         ) { paddingValues ->
             NavHost(
                 navController = navController,
@@ -159,7 +196,12 @@ fun AdminMainScreen(
                 }
                 
                 composable(AdminRoute.Users.route) {
-                    AdminManageUsersScreen(navController = navController)
+                    AdminManageUsersScreen(
+                        navController = navController,
+                        viewModel = adminUserViewModel,
+                        onUserClick = onUserClick,
+                        onAddUserClick = onAddUserClick
+                    )
                 }
                 
                 composable(AdminRoute.Appointments.route) {

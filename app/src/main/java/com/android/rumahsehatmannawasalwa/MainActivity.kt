@@ -64,6 +64,8 @@ class MainActivity : ComponentActivity() {
                 // Shared ViewModel for Booking Flow
                 val bookingViewModel: BookingViewModel = viewModel()
 
+                val adminUserViewModel: com.android.rumahsehatmannawasalwa.ui.viewmodel.user.AdminUserViewModel = viewModel()
+
                 NavHost(navController = navController, startDestination = startDestination) {
 
                     // Halaman Login
@@ -94,7 +96,47 @@ class MainActivity : ComponentActivity() {
                                 navController.navigate("login") {
                                     popUpTo(0)
                                 }
+                            },
+                            adminUserViewModel = adminUserViewModel,
+                            onUserClick = { userId ->
+                                navController.navigate("admin_user_detail/$userId")
+                            },
+                            onAddUserClick = {
+                                navController.navigate("admin_add_user")
                             }
+                        )
+                    }
+
+                    composable(
+                        route = "admin_add_user"
+                    ) {
+                        com.android.rumahsehatmannawasalwa.ui.screens.admin.users.AdminAddUserScreen(
+                            navController = navController,
+                            viewModel = adminUserViewModel
+                        )
+                    }
+
+                    composable(
+                        route = "admin_user_detail/{userId}",
+                        arguments = listOf(navArgument("userId") { type = NavType.IntType })
+                    ) { backStackEntry ->
+                        val userId = backStackEntry.arguments?.getInt("userId") ?: 0
+                        com.android.rumahsehatmannawasalwa.ui.screens.admin.users.AdminUserDetailScreen(
+                            navController = navController,
+                            viewModel = adminUserViewModel,
+                            userId = userId
+                        )
+                    }
+
+                    composable(
+                        route = "admin_edit_user/{userId}",
+                        arguments = listOf(navArgument("userId") { type = NavType.IntType })
+                    ) { backStackEntry ->
+                        val userId = backStackEntry.arguments?.getInt("userId") ?: 0
+                        com.android.rumahsehatmannawasalwa.ui.screens.admin.users.AdminEditUserScreen(
+                            navController = navController,
+                            viewModel = adminUserViewModel,
+                            userId = userId
                         )
                     }
 

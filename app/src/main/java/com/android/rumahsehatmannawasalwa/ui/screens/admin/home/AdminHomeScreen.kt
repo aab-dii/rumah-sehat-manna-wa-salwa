@@ -25,8 +25,6 @@ fun AdminHomeScreen(
     viewModel: AdminUserViewModel = viewModel(),
     onLogout: () -> Unit // Kept for compatibility but unused
 ) {
-    val userPagingItems = viewModel.userPager.collectAsLazyPagingItems()
-
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -38,29 +36,6 @@ fun AdminHomeScreen(
             fontWeight = FontWeight.Bold,
             modifier = Modifier.padding(16.dp)
         )
-
-        LazyColumn(
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            items(
-                count = userPagingItems.itemCount,
-                key = { index -> userPagingItems[index]?.id ?: index }
-            ) { index ->
-                val user = userPagingItems[index]
-                if (user != null) {
-                    UserCard(user)
-                }
-            }
-
-            item {
-                if (userPagingItems.loadState.append is LoadState.Loading) {
-                    Box(modifier = Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator()
-                    }
-                }
-            }
-        }
     }
 }
 

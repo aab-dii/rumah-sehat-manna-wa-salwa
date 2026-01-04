@@ -11,5 +11,6 @@ data class RegisterRequest(
     @SerializedName("firebase_uid") val firebaseUid: String,
     @SerializedName("pekerjaan") val pekerjaan: String,
     @SerializedName("alamat") val alamat: String,
-    @SerializedName("tgl_lahir") val tglLahir: String // Format YYYY-MM-DD
+    @SerializedName("tgl_lahir") val tglLahir: String,
+    @SerializedName("jenisKelamin") val jenisKelamin: String
 )
