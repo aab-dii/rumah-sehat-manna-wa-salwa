@@ -10,7 +10,8 @@ import android.util.Log
 class UserPagingSource(
     private val apiService: ApiService,
     private val role: String? = null,
-    private val search: String? = null
+    private val search: String? = null,
+    private val trash: Int? = 0 // Default 0 (Active)
 ) : PagingSource<Int, User>() {
 
     override fun getRefreshKey(state: PagingState<Int, User>): Int? {
@@ -23,10 +24,10 @@ class UserPagingSource(
     override suspend fun load(params: LoadParams<Int>): LoadResult<Int, User> {
         return try {
             val page = params.key ?: 1
-            Log.d("UserPagingSource", "Requesting users page: $page, role: $role, search: $search")
+            Log.d("UserPagingSource", "Requesting page: $page, role: $role, search: $search, trash: $trash")
 
             // Use role filter if provided
-            val response = apiService.getUsers(page = page, role = role, search = search)
+            val response = apiService.getUsers(page = page, role = role, search = search, trash = trash)
 
             if (response.isSuccessful && response.body() != null) {
                 val userResponse = response.body()!!

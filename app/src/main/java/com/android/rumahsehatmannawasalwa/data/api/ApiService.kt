@@ -13,6 +13,8 @@ import retrofit2.http.POST
 import com.android.rumahsehatmannawasalwa.data.model.auth.UserResponse
 import com.android.rumahsehatmannawasalwa.data.model.service.ServiceResponse
 import com.android.rumahsehatmannawasalwa.data.model.auth.UserListResponse
+import okhttp3.MultipartBody
+import okhttp3.RequestBody
 import retrofit2.http.*
 
 
@@ -20,11 +22,22 @@ interface ApiService {
     @POST("register")
     suspend fun registerUser(@Body request: RegisterRequest): Response<UserResponse>
 
+    @POST("users/create")
+    suspend fun createUser(@Body request: RegisterRequest): Response<UserResponse>
+
     @GET("user/firebase/{uid}")
     suspend fun getUserProfile(@Path("uid") uid: String): Response<UserResponse>
 
     @POST("user/update")
     suspend fun updateProfile(@Body request: UpdateProfileRequest): Response<UserResponse>
+
+    @Multipart
+    @POST("users/{id}/update")
+    suspend fun updateUserByAdmin(
+        @Path("id") id: Int,
+        @PartMap data: Map<String, @JvmSuppressWildcards RequestBody>,
+        @Part photo: MultipartBody.Part?
+    ): Response<UserResponse>
 
     @GET("services")
     suspend fun getServices(
@@ -51,8 +64,12 @@ interface ApiService {
         @Query("page") page: Int,
         @Query("role") role: String? = null,
         @Query("search") search: String? = null,
+        @Query("trash") trash: Int? = 0, // 1 = trashed, 0 = active
         @Query("limit") limit: Int = 10
     ): Response<UserListResponse>
+
+    @POST("users/{id}/restore")
+    suspend fun restoreUser(@Path("id") id: Int): Response<Any>
 
     @DELETE("users/{id}")
     suspend fun deleteUser(@Path("id") id: Int): Response<Any>
