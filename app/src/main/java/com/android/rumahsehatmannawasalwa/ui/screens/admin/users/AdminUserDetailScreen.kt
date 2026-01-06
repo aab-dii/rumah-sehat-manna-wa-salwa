@@ -1,5 +1,6 @@
 package com.android.rumahsehatmannawasalwa.ui.screens.admin.users
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -9,6 +10,7 @@ import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -36,13 +38,16 @@ fun AdminUserDetailScreen(
     val actionState by viewModel.actionState.collectAsState()
     
     // Local state for dialog
+    val isDeactivated = userState?.deletedAt != null
+    var showRestoreDialog by remember { mutableStateOf(false) }
     var showDeleteDialog by remember { mutableStateOf(false) }
 
-    // Navigation & Effect for Action (Delete)
+    // Navigation & Effect for Action (Delete/Restore)
     val context = androidx.compose.ui.platform.LocalContext.current
     LaunchedEffect(actionState) {
         if (actionState is ApiResult.Success) {
-            android.widget.Toast.makeText(context, "User berhasil dihapus", android.widget.Toast.LENGTH_SHORT).show()
+            val message = if (isDeactivated) "User berhasil diaktifkan kembali" else "User berhasil dinonaktifkan"
+            android.widget.Toast.makeText(context, message, android.widget.Toast.LENGTH_SHORT).show()
             viewModel.resetActionState()
             navController.popBackStack() // Go back to list
         } else if (actionState is ApiResult.Error) {
@@ -73,13 +78,15 @@ fun AdminUserDetailScreen(
             )
         },
         floatingActionButton = {
-            FloatingActionButton(
-                onClick = { 
-                    navController.navigate("admin_edit_user/${user.id}")
-                },
-                containerColor = MaterialTheme.colorScheme.primaryContainer
-            ) {
-                Icon(Icons.Default.Edit, contentDescription = "Edit User")
+            if (!isDeactivated) {
+                FloatingActionButton(
+                    onClick = { 
+                        navController.navigate("admin_edit_user/${user.id}")
+                    },
+                    containerColor = MaterialTheme.colorScheme.primaryContainer
+                ) {
+                    Icon(Icons.Default.Edit, contentDescription = "Edit User")
+                }
             }
         }
     ) { padding ->
@@ -96,14 +103,15 @@ fun AdminUserDetailScreen(
             Surface(
                 modifier = Modifier.size(100.dp),
                 shape = CircleShape,
-                color = MaterialTheme.colorScheme.primaryContainer
+                color = if (isDeactivated) Color.Gray else MaterialTheme.colorScheme.primaryContainer
             ) {
                 if (user.name.isNotEmpty()) {
                     coil.compose.AsyncImage(
                         model = "https://ui-avatars.com/api/?name=${user.name}&background=random&size=200",
                         contentDescription = "Foto Profil",
                         modifier = Modifier.fillMaxSize(),
-                        contentScale = androidx.compose.ui.layout.ContentScale.Crop
+                        contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                        alpha = if (isDeactivated) 0.5f else 1f
                     )
                 } else {
                     Icon(
@@ -116,6 +124,25 @@ fun AdminUserDetailScreen(
             }
 
             Spacer(modifier = Modifier.height(24.dp))
+            
+            if (isDeactivated) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp)
+                        .background(Color(0xFFEEEEEE), MaterialTheme.shapes.small)
+                        .padding(8.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "User ini sedang dinonaktifkan.",
+                        color = Color.DarkGray,
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+                Spacer(modifier = Modifier.height(16.dp))
+            }
 
             // --- List Detail ---
             Column(modifier = Modifier.padding(horizontal = 16.dp)) {
@@ -123,7 +150,12 @@ fun AdminUserDetailScreen(
                 AdminDetailItem("Role", user.role.replaceFirstChar { it.uppercase() })
                 AdminDetailItem("Email", user.email)
                 AdminDetailItem("Nomor HP", user.phoneNumber)
-                AdminDetailItem("Pekerjaan", user.job)
+                if (user.role == "terapis") {
+                     val specs = user.specialization.joinToString(", ")
+                     AdminDetailItem("Spesialisasi", if (specs.isBlank()) "-" else specs)
+                } else {
+                     AdminDetailItem("Pekerjaan", user.job)
+                }
                 
                 // Format Tanggal
                 val dobDisplay = try {
@@ -146,18 +178,33 @@ fun AdminUserDetailScreen(
             
             Spacer(modifier = Modifier.height(40.dp))
             
-            // Delete Button (moved to bottom)
-            Button(
-                onClick = { showDeleteDialog = true },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
-                shape = MaterialTheme.shapes.medium,
-                colors = ButtonDefaults.buttonColors(containerColor = Color.Red)
-            ) {
-                Icon(Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(18.dp))
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("Hapus User")
+            // Delete / Restore Button
+            if (isDeactivated) {
+                Button(
+                    onClick = { showRestoreDialog = true },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp),
+                    shape = MaterialTheme.shapes.medium,
+                    colors = ButtonDefaults.buttonColors(containerColor = com.android.rumahsehatmannawasalwa.ui.theme.GreenPrimary)
+                ) {
+                    Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Aktifkan Kembali (Restore)")
+                }
+            } else {
+                Button(
+                    onClick = { showDeleteDialog = true },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp),
+                    shape = MaterialTheme.shapes.medium,
+                    colors = ButtonDefaults.buttonColors(containerColor = Color.Red)
+                ) {
+                    Icon(Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Nonaktifkan User")
+                }
             }
             
             // Space for FAB
@@ -169,8 +216,8 @@ fun AdminUserDetailScreen(
     if (showDeleteDialog) {
         AlertDialog(
             onDismissRequest = { showDeleteDialog = false },
-            title = { Text("Hapus User?") },
-            text = { Text("Apakah Anda yakin ingin menghapus user '${user.name}'? Tindakan ini tidak dapat dibatalkan.") },
+            title = { Text("Nonaktifkan User?") },
+            text = { Text("Apakah Anda yakin ingin menonaktifkan user '${user.name}'? Data tidak akan hilang permanen, tapi user tidak bisa login.") },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -179,11 +226,36 @@ fun AdminUserDetailScreen(
                     },
                     colors = ButtonDefaults.textButtonColors(contentColor = Color.Red)
                 ) {
-                    Text("Hapus")
+                    Text("Nonaktifkan")
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showDeleteDialog = false }) {
+                    Text("Batal")
+                }
+            }
+        )
+    }
+
+    // Restore Confirmation Dialog
+    if (showRestoreDialog) {
+         AlertDialog(
+            onDismissRequest = { showRestoreDialog = false },
+            title = { Text("Aktifkan Kembali User?") },
+            text = { Text("Apakah Anda yakin ingin mengaktifkan kembali user '${user.name}'?") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showRestoreDialog = false
+                        viewModel.restoreUser(user.id)
+                    },
+                    colors = ButtonDefaults.textButtonColors(contentColor = com.android.rumahsehatmannawasalwa.ui.theme.GreenPrimary)
+                ) {
+                    Text("Aktifkan")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showRestoreDialog = false }) {
                     Text("Batal")
                 }
             }

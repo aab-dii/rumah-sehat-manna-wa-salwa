@@ -8,5 +8,6 @@ data class UpdateProfileRequest(
     @SerializedName("pekerjaan") val pekerjaan: String,
     @SerializedName("alamat") val alamat: String,
     @SerializedName("tgl_lahir") val tglLahir: String,
-    @SerializedName("jenis_kelamin") val jenisKelamin: String
+    @SerializedName("jenis_kelamin") val jenisKelamin: String,
+    @SerializedName("specialization") val specialization: List<String>? = null
 )

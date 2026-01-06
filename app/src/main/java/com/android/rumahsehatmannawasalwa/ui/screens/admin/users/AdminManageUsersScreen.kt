@@ -38,6 +38,7 @@ fun AdminManageUsersScreen(
     val patientPagingItems = viewModel.patientPager.collectAsLazyPagingItems()
     val therapistPagingItems = viewModel.therapistPager.collectAsLazyPagingItems()
     val searchQuery by viewModel.searchQuery.collectAsState()
+    val showTrashed by viewModel.showTrashed.collectAsState()
 
     Scaffold(
         floatingActionButton = {
@@ -57,22 +58,40 @@ fun AdminManageUsersScreen(
                 .background(Color(0xFFF9F9F9))
                 .padding(paddingValues) 
         ) {
-            // --- Search Bar ---
-            OutlinedTextField(
-                value = searchQuery,
-                onValueChange = { viewModel.onSearchQueryChanged(it) },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-                placeholder = { Text("Cari pengguna berdasarkan nama...") },
-                leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Search") },
-                shape = RoundedCornerShape(12.dp),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedContainerColor = Color.White,
-                    unfocusedContainerColor = Color.White
-                ),
-                singleLine = true
-            )
+            // --- Search Bar & Filter ---
+            Column(modifier = Modifier.padding(16.dp)) {
+                OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = { viewModel.onSearchQueryChanged(it) },
+                    modifier = Modifier.fillMaxWidth(),
+                    placeholder = { Text("Cari pengguna berdasarkan nama...") },
+                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Search") },
+                    shape = RoundedCornerShape(12.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedContainerColor = Color.White,
+                        unfocusedContainerColor = Color.White
+                    ),
+                    singleLine = true
+                )
+                
+                Spacer(modifier = Modifier.height(8.dp))
+                
+                // Filter Chip for "Nonaktif"
+                FilterChip(
+                    selected = showTrashed,
+                    onClick = { viewModel.toggleTrashFilter(!showTrashed) },
+                    label = { Text("Tampilkan User Nonaktif") },
+                    leadingIcon = {
+                        if (showTrashed) {
+                            Icon(Icons.Default.Check, contentDescription = null)
+                        }
+                    },
+                    colors = FilterChipDefaults.filterChipColors(
+                        selectedContainerColor = com.android.rumahsehatmannawasalwa.ui.theme.GreenContainer,
+                        selectedLabelColor = com.android.rumahsehatmannawasalwa.ui.theme.GreenPrimary
+                    )
+                )
+            }
 
             // Tab Row
             TabRow(
@@ -173,8 +192,10 @@ fun UserCard(
     user: User,
     onClick: () -> Unit
 ) {
+    val isDeactivated = user.deletedAt != null
+    
     Card(
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(containerColor = if (isDeactivated) Color(0xFFEEEEEE) else Color.White),
         shape = RoundedCornerShape(12.dp),
         elevation = CardDefaults.cardElevation(2.dp),
         modifier = Modifier
@@ -191,21 +212,38 @@ fun UserCard(
             Surface(
                 shape = androidx.compose.foundation.shape.CircleShape,
                 modifier = Modifier.size(50.dp),
-                color = com.android.rumahsehatmannawasalwa.ui.theme.GreenContainer
+                color = if (isDeactivated) Color.Gray else com.android.rumahsehatmannawasalwa.ui.theme.GreenContainer
             ) {
-                if (user.name.isNotEmpty()) {
+                if (!user.profilePhotoPath.isNullOrBlank()) {
+                    // CONSTRUCT FULL URL
+                    // Assuming BASE_URL ends with /api/, we strip it to get base domain and append /storage/
+                    // e.g. http://10.0.2.2:8000/api/ -> http://10.0.2.2:8000/storage/profile-photos/filename.jpg
+                    val baseUrl = com.android.rumahsehatmannawasalwa.BuildConfig.BASE_URL
+                    val storageUrl = baseUrl.replace("/api/", "/storage/")
+                    val fullPhotoUrl = "$storageUrl${user.profilePhotoPath}"
+
+                    coil.compose.AsyncImage(
+                        model = fullPhotoUrl,
+                        contentDescription = "Foto ${user.name}",
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                        alpha = if (isDeactivated) 0.5f else 1f,
+                        error = androidx.compose.ui.res.painterResource(com.android.rumahsehatmannawasalwa.R.drawable.ic_launcher_foreground) // Fallback if load fails
+                    )
+                } else if (user.name.isNotEmpty()) {
                     coil.compose.AsyncImage(
                         model = "https://ui-avatars.com/api/?name=${user.name}&background=random&size=128",
                         contentDescription = "Foto ${user.name}",
                         modifier = Modifier.fillMaxSize(),
-                        contentScale = androidx.compose.ui.layout.ContentScale.Crop
+                        contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                        alpha = if (isDeactivated) 0.5f else 1f
                     )
                 } else {
                      Icon(
                         imageVector = Icons.Default.AccountCircle,
                         contentDescription = null,
                         modifier = Modifier.padding(8.dp),
-                        tint = com.android.rumahsehatmannawasalwa.ui.theme.GreenPrimary
+                        tint = if (isDeactivated) Color.DarkGray else com.android.rumahsehatmannawasalwa.ui.theme.GreenPrimary
                     )
                 }
             }
@@ -217,14 +255,30 @@ fun UserCard(
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.Center
             ) {
-                // A. Nama (Tebal & Jelas)
-                Text(
-                    text = user.name,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = com.android.rumahsehatmannawasalwa.ui.theme.TextPrimary,
-                    maxLines = 1
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    // A. Nama (Tebal & Jelas)
+                    Text(
+                        text = user.name,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = if (isDeactivated) Color.Gray else com.android.rumahsehatmannawasalwa.ui.theme.TextPrimary,
+                        maxLines = 1
+                    )
+                    
+                    if (isDeactivated) {
+                        Spacer(modifier = Modifier.width(8.dp))
+                        SuggestionChip(
+                            onClick = {},
+                            label = { Text("Nonaktif", style = MaterialTheme.typography.labelSmall) },
+                            colors = SuggestionChipDefaults.suggestionChipColors(
+                                containerColor = Color.LightGray,
+                                labelColor = Color.DarkGray
+                            ),
+                            border = null,
+                            modifier = Modifier.height(24.dp)
+                        )
+                    }
+                }
 
                 // B. Email
                 Text(
@@ -249,7 +303,7 @@ fun UserCard(
             Icon(
                 imageVector = Icons.Default.ChevronRight,
                 contentDescription = "Detail",
-                tint = com.android.rumahsehatmannawasalwa.ui.theme.GreenPrimary,
+                tint = if (isDeactivated) Color.Gray else com.android.rumahsehatmannawasalwa.ui.theme.GreenPrimary,
                 modifier = Modifier.size(24.dp)
             )
         }

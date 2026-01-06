@@ -14,5 +14,7 @@ data class User(
     @SerializedName("gender", alternate = ["jenis_kelamin"]) val gender: String = "",
     @SerializedName("role") val role: String = "pasien",
     @SerializedName("specialization") val specialization: List<String> = emptyList(), // For therapists
+    @SerializedName("profile_photo_path") val profilePhotoPath: String? = null,
+    @SerializedName("deleted_at") val deletedAt: String? = null,
     @SerializedName("access_token") val accessToken: String? = null
 )

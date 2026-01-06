@@ -12,5 +12,6 @@ data class RegisterRequest(
     @SerializedName("pekerjaan") val pekerjaan: String,
     @SerializedName("alamat") val alamat: String,
     @SerializedName("tgl_lahir") val tglLahir: String,
-    @SerializedName("jenisKelamin") val jenisKelamin: String
+    @SerializedName("jenisKelamin") val jenisKelamin: String,
+    @SerializedName("specialization") val specialization: List<String>? = null
 )
