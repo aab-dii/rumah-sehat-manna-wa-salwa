@@ -65,6 +65,8 @@ class MainActivity : ComponentActivity() {
                 val bookingViewModel: BookingViewModel = viewModel()
 
                 val adminUserViewModel: com.android.rumahsehatmannawasalwa.ui.viewmodel.user.AdminUserViewModel = viewModel()
+                // Inject LayananViewModel for Admin Manage Services
+                val layananViewModel: com.android.rumahsehatmannawasalwa.ui.viewmodel.service.LayananViewModel = viewModel()
 
                 NavHost(navController = navController, startDestination = startDestination) {
 
@@ -98,11 +100,18 @@ class MainActivity : ComponentActivity() {
                                 }
                             },
                             adminUserViewModel = adminUserViewModel,
+                            layananViewModel = layananViewModel, 
                             onUserClick = { userId ->
                                 navController.navigate("admin_user_detail/$userId")
                             },
                             onAddUserClick = {
                                 navController.navigate("admin_add_user")
+                            },
+                            onServiceClick = { serviceId ->
+                                navController.navigate("admin_service_detail/$serviceId")
+                            },
+                            onAddServiceClick = {
+                                navController.navigate("admin_add_service")
                             }
                         )
                     }
@@ -137,6 +146,38 @@ class MainActivity : ComponentActivity() {
                             navController = navController,
                             viewModel = adminUserViewModel,
                             userId = userId
+                        )
+                    }
+
+                    // --- Service CRUD Routes ---
+                    composable("admin_add_service") {
+                        com.android.rumahsehatmannawasalwa.ui.screens.admin.services.AdminAddServiceScreen(
+                            navController = navController,
+                            viewModel = layananViewModel
+                        )
+                    }
+
+                    composable(
+                        route = "admin_service_detail/{serviceId}",
+                        arguments = listOf(navArgument("serviceId") { type = NavType.IntType })
+                    ) { backStackEntry ->
+                        val serviceId = backStackEntry.arguments?.getInt("serviceId") ?: 0
+                        com.android.rumahsehatmannawasalwa.ui.screens.admin.services.AdminServiceDetailScreen(
+                            navController = navController,
+                            viewModel = layananViewModel,
+                            serviceId = serviceId
+                        )
+                    }
+
+                    composable(
+                        route = "admin_edit_service/{serviceId}",
+                        arguments = listOf(navArgument("serviceId") { type = NavType.IntType })
+                    ) { backStackEntry ->
+                        val serviceId = backStackEntry.arguments?.getInt("serviceId") ?: 0
+                        com.android.rumahsehatmannawasalwa.ui.screens.admin.services.AdminAddServiceScreen(
+                            navController = navController,
+                            viewModel = layananViewModel,
+                            serviceId = serviceId
                         )
                     }
 

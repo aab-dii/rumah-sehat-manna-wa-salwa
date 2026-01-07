@@ -315,7 +315,7 @@ class AdminUserViewModel(application: Application) : AndroidViewModel(applicatio
 
                 var photoPart: MultipartBody.Part? = null
                 photoUri?.let { uri ->
-                    val file = getFileFromUri(uri)
+                    val file = com.android.rumahsehatmannawasalwa.utils.FileUtils.getFileFromUri(getApplication(), uri)
                     if (file != null) {
                         val requestFile = file.asRequestBody("image/*".toMediaTypeOrNull())
                         photoPart = MultipartBody.Part.createFormData("photo", file.name, requestFile)
@@ -332,22 +332,6 @@ class AdminUserViewModel(application: Application) : AndroidViewModel(applicatio
             } catch (e: Exception) {
                 _actionState.value = com.android.rumahsehatmannawasalwa.data.ApiResult.Error(e.message ?: "Error")
             }
-        }
-    }
-
-    private fun getFileFromUri(uri: Uri): File? {
-        return try {
-            val contentResolver = getApplication<Application>().contentResolver
-            val inputStream = contentResolver.openInputStream(uri) ?: return null
-            val tempFile = File.createTempFile("profile_photo", ".jpg", getApplication<Application>().cacheDir)
-            val outputStream = FileOutputStream(tempFile)
-            inputStream.copyTo(outputStream)
-            inputStream.close()
-            outputStream.close()
-            tempFile
-        } catch (e: Exception) {
-            e.printStackTrace()
-            null
         }
     }
 }

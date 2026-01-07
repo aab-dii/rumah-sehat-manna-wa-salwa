@@ -45,6 +45,27 @@ interface ApiService {
         @Query("limit") limit: Int = 10
     ): Response<ServiceResponse>
 
+    @POST("services")
+    @Multipart
+    suspend fun createService(
+        @PartMap data: Map<String, @JvmSuppressWildcards RequestBody>,
+        @Part image: MultipartBody.Part?
+    ): Response<ApiResponse<com.android.rumahsehatmannawasalwa.data.model.service.Layanan>>
+
+    @POST("services/{id}")
+    @Multipart
+    suspend fun updateService(
+        @Path("id") id: Int,
+        @PartMap data: Map<String, @JvmSuppressWildcards RequestBody>,
+        @Part image: MultipartBody.Part?
+    ): Response<ApiResponse<com.android.rumahsehatmannawasalwa.data.model.service.Layanan>>
+
+    @GET("services/{id}")
+    suspend fun getServiceDetail(@Path("id") id: Int): Response<ApiResponse<com.android.rumahsehatmannawasalwa.data.model.service.Layanan>>
+
+    @DELETE("services/{id}")
+    suspend fun deleteService(@Path("id") id: Int): Response<ApiResponse<Any?>>
+
     @GET("bookings")
     suspend fun getBookings(
         @Query("page") page: Int,

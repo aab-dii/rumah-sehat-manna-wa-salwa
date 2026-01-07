@@ -35,10 +35,19 @@ import kotlinx.coroutines.launch
 fun AdminMainScreen(
     onLogout: () -> Unit,
     adminUserViewModel: AdminUserViewModel,
+    layananViewModel: com.android.rumahsehatmannawasalwa.ui.viewmodel.service.LayananViewModel,
     onUserClick: (Int) -> Unit,
-    onAddUserClick: () -> Unit
+    onAddUserClick: () -> Unit,
+    onServiceClick: (Int) -> Unit,
+    onAddServiceClick: () -> Unit
 ) {
     val navController = rememberNavController()
+    // ...
+    // Note: I need to target the body change too, but replace_file does contiguous blocks.
+    // I will do signature first then body, or try to capture both if close enough?
+    // They are far apart (Lines 35 vs 221). Better to do 2 calls or use multi_replace.
+    // I'll use separate calls for safety. This replacement is for Signature.
+
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     
@@ -217,7 +226,14 @@ fun AdminMainScreen(
                 }
                 
                 // Drawer Destinations
-                composable(AdminRoute.Services.route) { PlaceholderScreen("Kelola Layanan") }
+                composable(AdminRoute.Services.route) { 
+                    com.android.rumahsehatmannawasalwa.ui.screens.admin.services.AdminManageServicesScreen(
+                        navController = navController,
+                        viewModel = layananViewModel,
+                        onServiceClick = onServiceClick,
+                        onAddServiceClick = onAddServiceClick
+                    ) 
+                }
                 composable(AdminRoute.Schedules.route) { PlaceholderScreen("Jadwal Terapis") }
                 composable(AdminRoute.Settings.route) { PlaceholderScreen("Pengaturan Akun") }
             }
