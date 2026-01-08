@@ -1,5 +1,8 @@
 package com.android.rumahsehatmannawasalwa.data.api
 
+import com.android.rumahsehatmannawasalwa.data.model.schedule.Schedule
+import com.android.rumahsehatmannawasalwa.data.model.schedule.UpdateScheduleRequest
+
 import com.android.rumahsehatmannawasalwa.data.model.common.ApiResponse
 import com.android.rumahsehatmannawasalwa.data.model.booking.BookingRequest
 import com.android.rumahsehatmannawasalwa.data.model.booking.BookingResponse
@@ -64,7 +67,22 @@ interface ApiService {
     suspend fun getServiceDetail(@Path("id") id: Int): Response<ApiResponse<com.android.rumahsehatmannawasalwa.data.model.service.Layanan>>
 
     @DELETE("services/{id}")
-    suspend fun deleteService(@Path("id") id: Int): Response<ApiResponse<Any?>>
+    suspend fun deleteService(@Path("id") id: Int): Response<ApiResponse<Nothing>>
+
+    // Schedule
+    @GET("schedules/{therapistId}")
+    suspend fun getSchedules(@Path("therapistId") therapistId: Int): Response<ApiResponse<List<Schedule>>>
+
+    @POST("schedules/update")
+    suspend fun updateSchedule(@Body request: UpdateScheduleRequest): Response<ApiResponse<Schedule>>
+
+    @POST("schedules/close-now")
+    suspend fun emergencyClose(@Body request: com.android.rumahsehatmannawasalwa.data.model.schedule.EmergencyCloseRequest): Response<ApiResponse<com.android.rumahsehatmannawasalwa.data.model.schedule.EmergencyCloseResponse>>
+
+    @POST("schedules/add-holiday")
+    suspend fun addHoliday(@Body request: com.android.rumahsehatmannawasalwa.data.model.schedule.AddHolidayRequest): Response<ApiResponse<com.android.rumahsehatmannawasalwa.data.model.schedule.AddHolidayResponse>>
+
+
 
     @GET("bookings")
     suspend fun getBookings(
