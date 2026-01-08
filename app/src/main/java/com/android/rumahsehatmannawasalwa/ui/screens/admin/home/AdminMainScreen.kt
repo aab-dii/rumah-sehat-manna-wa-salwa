@@ -39,7 +39,9 @@ fun AdminMainScreen(
     onUserClick: (Int) -> Unit,
     onAddUserClick: () -> Unit,
     onServiceClick: (Int) -> Unit,
-    onAddServiceClick: () -> Unit
+    onAddServiceClick: () -> Unit,
+    onTherapistClick: (Int) -> Unit,
+    onAddBookingClick: () -> Unit
 ) {
     val navController = rememberNavController()
     // ...
@@ -214,7 +216,10 @@ fun AdminMainScreen(
                 }
                 
                 composable(AdminRoute.Appointments.route) {
-                    AdminBookingScreen(navController = navController)
+                    AdminBookingScreen(
+                        navController = navController,
+                        onAddClick = onAddBookingClick
+                    )
                 }
                 
                 composable(
@@ -234,7 +239,18 @@ fun AdminMainScreen(
                         onAddServiceClick = onAddServiceClick
                     ) 
                 }
-                composable(AdminRoute.Schedules.route) { PlaceholderScreen("Jadwal Terapis") }
+                composable(AdminRoute.Schedules.route) { 
+                    com.android.rumahsehatmannawasalwa.ui.screens.admin.schedule.AdminTherapistListScreen(
+                        navController = navController, // Inner nav controller? Or can we use it?
+                        // We need to navigate to Outer Nav Controller for Detail.
+                        // AdminMainScreen doesn't usually expose outer nav controller to inner screens unless passed.
+                        // Wait, AdminMainScreen receives `onServiceClick` etc callbacks.
+                        // I should verify how callbacks are passed.
+                        // Yes, passed as params. I need to add `onScheduleClick` param to AdminMainScreen.
+                        viewModel = adminUserViewModel,
+                        onTherapistClick = onTherapistClick
+                    ) 
+                }
                 composable(AdminRoute.Settings.route) { PlaceholderScreen("Pengaturan Akun") }
             }
         }

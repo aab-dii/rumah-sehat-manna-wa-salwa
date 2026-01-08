@@ -112,6 +112,12 @@ class MainActivity : ComponentActivity() {
                             },
                             onAddServiceClick = {
                                 navController.navigate("admin_add_service")
+                            },
+                            onTherapistClick = { therapistId ->
+                                navController.navigate("admin_therapist_schedule/$therapistId")
+                            },
+                            onAddBookingClick = {
+                                navController.navigate("create_booking")
                             }
                         )
                     }
@@ -180,8 +186,39 @@ class MainActivity : ComponentActivity() {
                             serviceId = serviceId
                         )
                     }
+                    
+                    // --- Schedule Management ---
+                    composable("admin_therapist_list") {
+                         com.android.rumahsehatmannawasalwa.ui.screens.admin.schedule.AdminTherapistListScreen(
+                             navController = navController,
+                             viewModel = adminUserViewModel, // Share existing vm for list
+                             onTherapistClick = { therapistId ->
+                                 navController.navigate("admin_therapist_schedule/$therapistId")
+                             }
+                         )
+                    }
+
+                    composable(
+                        route = "admin_therapist_schedule/{therapistId}",
+                        arguments = listOf(navArgument("therapistId") { type = NavType.IntType })
+                    ) { backStackEntry ->
+                        val therapistId = backStackEntry.arguments?.getInt("therapistId") ?: 0
+                        com.android.rumahsehatmannawasalwa.ui.screens.admin.schedule.AdminTherapistScheduleScreen(
+                            navController = navController,
+                            therapistId = therapistId
+                        )
+                    }
 
                     // ... (Other routes remain same)
+                    
+                    composable("create_booking") {
+                        com.android.rumahsehatmannawasalwa.ui.screens.admin.bookings.AdminBookingCreateScreen(
+                            navController = navController,
+                            bookingViewModel = viewModel(),
+                            userViewModel = viewModel(), // Re-use viewModels if scoped properly, else new instance
+                            serviceViewModel = viewModel()
+                        )
+                    }
 
                     composable("booking_history") {
                         MyBookingScreen(navController, bookingViewModel)
