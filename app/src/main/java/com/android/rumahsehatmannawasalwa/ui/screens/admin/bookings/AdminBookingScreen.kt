@@ -34,8 +34,12 @@ import java.util.Locale
 @Composable
 fun AdminBookingScreen(
     navController: NavController,
+    onAddClick: () -> Unit, // Callback for adding booking
     viewModel: AdminBookingViewModel = viewModel()
 ) {
+    // ...
+    // In Scaffold -> FAB:
+    // onClick = onAddClick
     // Pagers
     val upcomingItems = viewModel.upcomingPager.collectAsLazyPagingItems()
     val historyItems = viewModel.historyPager.collectAsLazyPagingItems()
@@ -73,7 +77,7 @@ fun AdminBookingScreen(
     Scaffold(
         floatingActionButton = {
             FloatingActionButton(
-                onClick = { navController.navigate("create_booking") },
+                onClick = onAddClick,
                 containerColor = MaterialTheme.colorScheme.primary,
                 contentColor = Color.White
             ) {
