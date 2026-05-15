@@ -9,31 +9,36 @@ import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.SideEffect
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
+import androidx.core.view.WindowCompat
 
 private val DarkColorScheme = darkColorScheme(
     primary = GreenPrimary,
-    onPrimary = GreenOnPrimary,
-    primaryContainer = GreenContainer, // In dark mode usually darker, but keeping consistence for now or can be adjusted
-    onPrimaryContainer = GreenOnContainer,
-    secondary = EarthSecondary,
-    onSecondary = EarthOnSecondary,
-    secondaryContainer = EarthContainer,
-    onSecondaryContainer = EarthOnContainer,
-    background = BackgroundWhite, // Usually dark in dark mode, but let's keep it safe with existing
+    onPrimary = Color.White,
+    primaryContainer = GreenContainer,
+    onPrimaryContainer = GreenDark,
+    secondary = GreenLight,
+    onSecondary = Color.White,
+    secondaryContainer = GreenSoft,
+    onSecondaryContainer = GreenPrimary,
+    background = BackgroundWhite,
     surface = SurfaceGrey,
     onSurface = OnSurfaceBlack
 )
 
 private val LightColorScheme = lightColorScheme(
     primary = GreenPrimary,
-    onPrimary = GreenOnPrimary,
+    onPrimary = Color.White,
     primaryContainer = GreenContainer,
-    onPrimaryContainer = GreenOnContainer,
-    secondary = EarthSecondary,
-    onSecondary = EarthOnSecondary,
-    secondaryContainer = EarthContainer,
-    onSecondaryContainer = EarthOnContainer,
+    onPrimaryContainer = GreenDark,
+    secondary = GreenLight,
+    onSecondary = Color.White,
+    secondaryContainer = GreenSoft,
+    onSecondaryContainer = GreenPrimary,
     background = BackgroundWhite,
     surface = SurfaceGrey,
     onSurface = OnSurfaceBlack,
@@ -54,6 +59,16 @@ fun RumahsehatmannawasalwaTheme(
 
         darkTheme -> DarkColorScheme
         else -> LightColorScheme
+    }
+
+    val view = LocalView.current
+    if (!view.isInEditMode) {
+        SideEffect {
+            val window = (view.context as Activity).window
+            window.statusBarColor = GreenDark.toArgb()
+            // Set icons to light color since GreenPrimary is relatively dark
+            WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = false
+        }
     }
 
     MaterialTheme(

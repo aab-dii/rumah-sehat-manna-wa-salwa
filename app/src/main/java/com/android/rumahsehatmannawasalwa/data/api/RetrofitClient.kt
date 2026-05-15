@@ -1,6 +1,9 @@
 package com.android.rumahsehatmannawasalwa.data.api
 
+import android.util.Log
 import com.android.rumahsehatmannawasalwa.BuildConfig
+import com.google.android.gms.tasks.Tasks
+import com.google.firebase.auth.FirebaseAuth
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
@@ -8,48 +11,51 @@ import retrofit2.converter.gson.GsonConverterFactory
 import java.util.concurrent.TimeUnit
 
 object RetrofitClient {
-   
-    private const val BASE_URL = BuildConfig.BASE_URL
+    private const val TAG = "RetrofitClient"
+    public const val BASE_URL = BuildConfig.BASE_URL
 
+    @Volatile
     var authToken: String? = null
 
-    val instance: ApiService by lazy {
-        
-        // Logging Interceptor: Membantu debug request/response di Logcat
+    private val client by lazy {
         val loggingInterceptor = HttpLoggingInterceptor().apply {
-            level = if (BuildConfig.DEBUG) {
-                HttpLoggingInterceptor.Level.BODY
-            } else {
-                HttpLoggingInterceptor.Level.NONE
-            }
+            level = HttpLoggingInterceptor.Level.BODY
         }
 
-        val client = OkHttpClient.Builder()
-            // Pasang logger paling awal/akhir tergantung kebutuhan, BODY paling enak untuk debug data
+        OkHttpClient.Builder()
             .addInterceptor(loggingInterceptor)
             .addInterceptor { chain ->
-                val original = chain.request()
-                val requestBuilder = original.newBuilder()
-                    .addHeader("Accept", "application/json")
-                
-                // Jika token tersedia, tambahkan ke Header Authorization
-                authToken?.let { token ->
-                    requestBuilder.addHeader("Authorization", "Bearer $token")
+                val requestBuilder = chain.request().newBuilder()
+                requestBuilder.addHeader("Accept", "application/json")
+
+                // Gunakan token yang diset dari AuthRepository (Sanctum Token)
+                authToken?.let {
+                    Log.d(TAG, "Mengirim request dengan Sanctum Token...")
+                    requestBuilder.header("Authorization", "Bearer $it")
                 }
 
                 chain.proceed(requestBuilder.build())
             }
+            .authenticator { _, response ->
+                // Jika 401, jangan refresh via Firebase di sini.
+                // Karena Sanctum token biasanya long-lived.
+                // Jika 401, berarti user harus login ulang.
+                if (response.code == 401) {
+                    Log.e(TAG, "Sanctum Token Expired atau Tidak Valid. Menghentikan request.")
+                    authToken = null
+                }
+                null
+            }
             .connectTimeout(30, TimeUnit.SECONDS)
-            .readTimeout(30, TimeUnit.SECONDS)
-            .writeTimeout(30, TimeUnit.SECONDS)
             .build()
+    }
 
-        val retrofit = Retrofit.Builder()
+    val instance: ApiService by lazy {
+        Retrofit.Builder()
             .baseUrl(BASE_URL)
-            .client(client)
             .addConverterFactory(GsonConverterFactory.create())
+            .client(client)
             .build()
-
-        retrofit.create(ApiService::class.java)
+            .create(ApiService::class.java)
     }
 }

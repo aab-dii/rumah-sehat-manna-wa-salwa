@@ -13,5 +13,6 @@ data class RegisterRequest(
     @SerializedName("alamat") val alamat: String,
     @SerializedName("tgl_lahir") val tglLahir: String,
     @SerializedName("jenisKelamin") val jenisKelamin: String,
+    @SerializedName("foto_url") val fotoUrl: String? = null,
     @SerializedName("specialization") val specialization: List<String>? = null
 )

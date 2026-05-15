@@ -13,6 +13,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -20,133 +21,201 @@ import androidx.navigation.NavController
 import androidx.paging.LoadState
 import androidx.paging.compose.LazyPagingItems
 import androidx.paging.compose.collectAsLazyPagingItems
+import com.android.rumahsehatmannawasalwa.R
 import com.android.rumahsehatmannawasalwa.data.model.auth.User
+import com.android.rumahsehatmannawasalwa.ui.navigation.Screen
+import com.android.rumahsehatmannawasalwa.ui.theme.*
 import com.android.rumahsehatmannawasalwa.ui.viewmodel.user.AdminUserViewModel
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
+import androidx.compose.ui.draw.scale
+import com.android.rumahsehatmannawasalwa.ui.components.TopBar
+import com.android.rumahsehatmannawasalwa.ui.components.auth.ProfilePhoto
+import com.android.rumahsehatmannawasalwa.ui.components.appointment.SharedSearchBar
+import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.ui.draw.alpha
+import androidx.navigation.compose.currentBackStackEntryAsState
+import com.android.rumahsehatmannawasalwa.ui.components.appointment.CapsuleTabRow
+import com.android.rumahsehatmannawasalwa.ui.components.snackbar.*
+import kotlinx.coroutines.launch
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun AdminManageUsersScreen(
     navController: NavController,
     viewModel: AdminUserViewModel = viewModel(),
-    onUserClick: (Int) -> Unit,
-    onAddUserClick: () -> Unit // New Parameter
 ) {
-    // Tab State: 0 = Pasien, 1 = Terapis
-    var selectedTabIndex by remember { mutableStateOf(0) }
-
     // Collect BOTH pagers to keep their state alive
-    val patientPagingItems = viewModel.patientPager.collectAsLazyPagingItems()
-    val therapistPagingItems = viewModel.therapistPager.collectAsLazyPagingItems()
+    val patientPagingItems = viewModel.getUserPager("pasien").collectAsLazyPagingItems()
+    val therapistPagingItems = viewModel.getUserPager("terapis").collectAsLazyPagingItems()
     val searchQuery by viewModel.searchQuery.collectAsState()
     val showTrashed by viewModel.showTrashed.collectAsState()
 
-    Scaffold(
-        floatingActionButton = {
-            FloatingActionButton(
-                onClick = onAddUserClick,
-                containerColor = com.android.rumahsehatmannawasalwa.ui.theme.GreenPrimary,
-                contentColor = Color.White
-            ) {
-                Icon(Icons.Default.Add, contentDescription = "Tambah User")
-            }
-        },
-        containerColor = Color.Transparent // Allow background to show through if any
-    ) { paddingValues ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(Color(0xFFF9F9F9))
-                .padding(paddingValues) 
-        ) {
-            // --- Search Bar & Filter ---
-            Column(modifier = Modifier.padding(16.dp)) {
-                OutlinedTextField(
-                    value = searchQuery,
-                    onValueChange = { viewModel.onSearchQueryChanged(it) },
-                    modifier = Modifier.fillMaxWidth(),
-                    placeholder = { Text("Cari pengguna berdasarkan nama...") },
-                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Search") },
-                    shape = RoundedCornerShape(12.dp),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedContainerColor = Color.White,
-                        unfocusedContainerColor = Color.White
-                    ),
-                    singleLine = true
-                )
-                
-                Spacer(modifier = Modifier.height(8.dp))
-                
-                // Filter Chip for "Nonaktif"
-                FilterChip(
-                    selected = showTrashed,
-                    onClick = { viewModel.toggleTrashFilter(!showTrashed) },
-                    label = { Text("Tampilkan User Nonaktif") },
-                    leadingIcon = {
-                        if (showTrashed) {
-                            Icon(Icons.Default.Check, contentDescription = null)
-                        }
-                    },
-                    colors = FilterChipDefaults.filterChipColors(
-                        selectedContainerColor = com.android.rumahsehatmannawasalwa.ui.theme.GreenContainer,
-                        selectedLabelColor = com.android.rumahsehatmannawasalwa.ui.theme.GreenPrimary
-                    )
-                )
-            }
+    val snackbarHostState = remember { SnackbarHostState() }
+    val isSnackbarShowing = snackbarHostState.currentSnackbarData != null
+    
+    // Animate FAB up when snackbar is showing
+    val fabOffset by animateDpAsState(
+        targetValue = if (isSnackbarShowing) (-80).dp else 0.dp,
+        animationSpec = tween(durationMillis = 300),
+        label = "fab_movement"
+    )
 
-            // Tab Row
-            TabRow(
-                selectedTabIndex = selectedTabIndex,
-                containerColor = Color.White,
-                contentColor = com.android.rumahsehatmannawasalwa.ui.theme.GreenPrimary,
-                indicator = { tabPositions ->
-                    TabRowDefaults.SecondaryIndicator(
-                        Modifier.tabIndicatorOffset(tabPositions[selectedTabIndex]),
-                        color = com.android.rumahsehatmannawasalwa.ui.theme.GreenPrimary
-                    )
-                }
-            ) {
-                Tab(
-                    selected = selectedTabIndex == 0,
-                    onClick = { selectedTabIndex = 0 },
-                    text = { Text("Pasien") },
-                    selectedContentColor = com.android.rumahsehatmannawasalwa.ui.theme.GreenPrimary,
-                    unselectedContentColor = Color.Gray
-                )
-                Tab(
-                    selected = selectedTabIndex == 1,
-                    onClick = { selectedTabIndex = 1 },
-                    text = { Text("Terapis") },
-                    selectedContentColor = com.android.rumahsehatmannawasalwa.ui.theme.GreenPrimary,
-                    unselectedContentColor = Color.Gray
-                )
-            }
+    // Check Navigation Result for Snackbar
+    val navBackStackEntry by navController.currentBackStackEntryAsState()
+    val savedStateHandle = navBackStackEntry?.savedStateHandle
+    val snackbarMsg = savedStateHandle?.getStateFlow<String?>("snackbar_msg", null)?.collectAsState()
+    val snackbarTypeVal = savedStateHandle?.getStateFlow<String?>("snackbar_type", null)?.collectAsState()
 
-            // Content
-            if (selectedTabIndex == 0) {
-                UserListContent(
-                    userPagingItems = patientPagingItems,
-                    onUserClick = { user ->
-                        viewModel.selectUser(user)
-                        onUserClick(user.id)
-                    }
-                )
-            } else {
-                UserListContent(
-                    userPagingItems = therapistPagingItems,
-                    onUserClick = { user ->
-                        viewModel.selectUser(user)
-                        onUserClick(user.id)
-                    }
-                )
+    LaunchedEffect(snackbarMsg?.value) {
+        snackbarMsg?.value?.let { msg ->
+            val type = when (snackbarTypeVal?.value) {
+                "SUCCESS" -> SnackbarType.SUCCESS
+                "ERROR"   -> SnackbarType.ERROR
+                else      -> SnackbarType.INFO
             }
+            snackbarHostState.showSnackbar(MannaSnackbarVisuals(message = msg, type = type))
+            savedStateHandle?.remove<String>("snackbar_msg")
+            savedStateHandle?.remove<String>("snackbar_type")
         }
     }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(BackgroundWhite)
+    ) {
+        // 1. TopBar Gradient
+        TopBar(
+            title = "Kelola Pengguna",
+            subtitle = "Atur dan kelola data pasien & terapis",
+            onBackClick = { navController.navigateUp() },
+            bottomExtra = 130.dp
+        )
+
+        // 2. Fixed White Sheet
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(top = 230.dp)
+                .clipToBounds()
+                .background(
+                    color = BackgroundWhite,
+                    shape = RoundedCornerShape(topStart = 30.dp, topEnd = 30.dp)
+                )
+        )
+
+            // 3. Floating Overlapping Controls (Search & Toggle)
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 90.dp)
+            ) {
+                Box(modifier = Modifier.padding(horizontal = 16.dp)) {
+                    SharedSearchBar(
+                        value = searchQuery,
+                        onValueChange = { viewModel.onSearchQueryChanged(it) }
+                    )
+                }
+                Spacer(modifier = Modifier.height(12.dp))
+                Box(modifier = Modifier.padding(horizontal = 16.dp)) {
+                    InactiveUsersToggle(
+                        isChecked = showTrashed,
+                        onCheckedChange = { viewModel.toggleTrashFilter(!showTrashed) }
+                    )
+                }
+            }
+
+            // 4. Content Area (Tabs + List)
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(top = 230.dp)
+            ) {
+                val pagerState = rememberPagerState(pageCount = { 2 })
+                val coroutineScope = rememberCoroutineScope()
+                val tabs = listOf(stringResource(id = R.string.patient), stringResource(id = R.string.therapist))
+
+                // Capsule Tab Row (needs horizontal padding)
+                Box(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+                    CapsuleTabRow(
+                        tabs = tabs,
+                        pagerState = pagerState,
+                        onTabSelected = { index ->
+                            coroutineScope.launch {
+                                pagerState.animateScrollToPage(index)
+                            }
+                        }
+                    )
+                }
+
+                HorizontalPager(state = pagerState, modifier = Modifier.fillMaxSize()) { page ->
+                    if (page == 0) {
+                        UserListContent(
+                            userPagingItems = patientPagingItems,
+                            onUserClick = { user ->
+                                navController.navigate(
+                                    Screen.AdminUserDetail.route.replace(
+                                        "{userId}",
+                                        user.id.toString()
+                                    )
+                                )
+                            }
+                        )
+                    } else {
+                        UserListContent(
+                            userPagingItems = therapistPagingItems,
+                            onUserClick = { user ->
+                                navController.navigate(
+                                    Screen.AdminUserDetail.route.replace(
+                                        "{userId}",
+                                        user.id.toString()
+                                    )
+                                )
+                            }
+                        )
+                    }
+            }
+        }
+
+        // 5. FAB
+        FloatingActionButton(
+            onClick = { navController.navigate(Screen.AdminAddUser.route) },
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(bottom = 16.dp, end = 16.dp)
+                .offset(y = fabOffset),
+            containerColor = GreenPrimary,
+            contentColor = Color.White
+        ) {
+            Icon(
+                Icons.Default.Add,
+                contentDescription = "Tambah Pengguna"
+            )
+        }
+
+        // 6. Snackbar Host
+        SnackbarHost(
+            hostState = snackbarHostState,
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+        ) { data -> MannaSnackbar(snackbarData = data) }
+    }
 }
+
 
 @Composable
 fun UserListContent(
     userPagingItems: LazyPagingItems<User>,
-    onUserClick: (User) -> Unit // <--- PARAMETER INI DITAMBAHKAN
+    onUserClick: (User) -> Unit
 ) {
     if (userPagingItems.loadState.refresh is LoadState.Loading) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -170,7 +239,10 @@ fun UserListContent(
 
             if (userPagingItems.loadState.append is LoadState.Loading) {
                 item {
-                    Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                    Box(
+                        modifier = Modifier.fillMaxWidth(),
+                        contentAlignment = Alignment.Center
+                    ) {
                         CircularProgressIndicator()
                     }
                 }
@@ -178,8 +250,11 @@ fun UserListContent(
 
             if (userPagingItems.itemCount == 0 && userPagingItems.loadState.refresh !is LoadState.Loading) {
                 item {
-                    Box(modifier = Modifier.fillParentMaxSize(), contentAlignment = Alignment.Center) {
-                        Text("Tidak ada data pengguna.", color = Color.Gray)
+                    Box(
+                        modifier = Modifier.fillParentMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text("Tidak ada data pengguna.", color = BodyGray)
                     }
                 }
             }
@@ -193,14 +268,17 @@ fun UserCard(
     onClick: () -> Unit
 ) {
     val isDeactivated = user.deletedAt != null
-    
+
     Card(
-        colors = CardDefaults.cardColors(containerColor = if (isDeactivated) Color(0xFFEEEEEE) else Color.White),
-        shape = RoundedCornerShape(12.dp),
-        elevation = CardDefaults.cardElevation(2.dp),
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { onClick() }
+            .padding(horizontal = 4.dp, vertical = 6.dp)
+            .clickable { onClick() },
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = if (isDeactivated) DividerLight else Color.White
+        ),
+        elevation = CardDefaults.cardElevation(2.dp)
     ) {
         Row(
             modifier = Modifier
@@ -208,45 +286,22 @@ fun UserCard(
                 .fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // 1. Avatar (AsyncImage with UI Avatars)
-            Surface(
-                shape = androidx.compose.foundation.shape.CircleShape,
-                modifier = Modifier.size(50.dp),
-                color = if (isDeactivated) Color.Gray else com.android.rumahsehatmannawasalwa.ui.theme.GreenContainer
-            ) {
-                if (!user.profilePhotoPath.isNullOrBlank()) {
-                    // CONSTRUCT FULL URL
-                    // Assuming BASE_URL ends with /api/, we strip it to get base domain and append /storage/
-                    // e.g. http://10.0.2.2:8000/api/ -> http://10.0.2.2:8000/storage/profile-photos/filename.jpg
+            // 1. Avatar menggunakan komponen ProfilePhoto (Sama dengan ProfileScreen)
+            val photoUrl = when {
+                !user.profilePhotoPath.isNullOrBlank() -> {
                     val baseUrl = com.android.rumahsehatmannawasalwa.BuildConfig.BASE_URL
                     val storageUrl = baseUrl.replace("/api/", "/storage/")
-                    val fullPhotoUrl = "$storageUrl${user.profilePhotoPath}"
-
-                    coil.compose.AsyncImage(
-                        model = fullPhotoUrl,
-                        contentDescription = "Foto ${user.name}",
-                        modifier = Modifier.fillMaxSize(),
-                        contentScale = androidx.compose.ui.layout.ContentScale.Crop,
-                        alpha = if (isDeactivated) 0.5f else 1f,
-                        error = androidx.compose.ui.res.painterResource(com.android.rumahsehatmannawasalwa.R.drawable.ic_launcher_foreground) // Fallback if load fails
-                    )
-                } else if (user.name.isNotEmpty()) {
-                    coil.compose.AsyncImage(
-                        model = "https://ui-avatars.com/api/?name=${user.name}&background=random&size=128",
-                        contentDescription = "Foto ${user.name}",
-                        modifier = Modifier.fillMaxSize(),
-                        contentScale = androidx.compose.ui.layout.ContentScale.Crop,
-                        alpha = if (isDeactivated) 0.5f else 1f
-                    )
-                } else {
-                     Icon(
-                        imageVector = Icons.Default.AccountCircle,
-                        contentDescription = null,
-                        modifier = Modifier.padding(8.dp),
-                        tint = if (isDeactivated) Color.DarkGray else com.android.rumahsehatmannawasalwa.ui.theme.GreenPrimary
-                    )
+                    "$storageUrl${user.profilePhotoPath}"
                 }
+                !user.fotoUrl.isNullOrBlank() -> user.fotoUrl
+                else -> null
             }
+
+            ProfilePhoto(
+                photoUrl = photoUrl,
+                size = 52.dp,
+                modifier = Modifier.alpha(if (isDeactivated) 0.5f else 1f)
+            )
 
             Spacer(modifier = Modifier.width(16.dp))
 
@@ -261,18 +316,23 @@ fun UserCard(
                         text = user.name,
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
-                        color = if (isDeactivated) Color.Gray else com.android.rumahsehatmannawasalwa.ui.theme.TextPrimary,
+                        color = if (isDeactivated) GrayText else TextPrimary,
                         maxLines = 1
                     )
-                    
+
                     if (isDeactivated) {
                         Spacer(modifier = Modifier.width(8.dp))
                         SuggestionChip(
                             onClick = {},
-                            label = { Text("Nonaktif", style = MaterialTheme.typography.labelSmall) },
+                            label = {
+                                Text(
+                                    "Nonaktif",
+                                    style = MaterialTheme.typography.labelSmall
+                                )
+                            },
                             colors = SuggestionChipDefaults.suggestionChipColors(
-                                containerColor = Color.LightGray,
-                                labelColor = Color.DarkGray
+                                containerColor = DividerColor,
+                                labelColor = SlateText
                             ),
                             border = null,
                             modifier = Modifier.height(24.dp)
@@ -299,12 +359,64 @@ fun UserCard(
                 }
             }
 
-            // 3. Icon Chevron
-            Icon(
-                imageVector = Icons.Default.ChevronRight,
-                contentDescription = "Detail",
-                tint = if (isDeactivated) Color.Gray else com.android.rumahsehatmannawasalwa.ui.theme.GreenPrimary,
-                modifier = Modifier.size(24.dp)
+            // 3. Right indicator dot
+            Box(
+                modifier = Modifier
+                    .size(8.dp)
+                    .clip(CircleShape)
+                    .background(
+                        if (isDeactivated) GrayText else GreenLight.copy(
+                            alpha = 0.65f
+                        )
+                    )
+            )
+        }
+    }
+}
+
+@Composable
+fun InactiveUsersToggle(
+    isChecked: Boolean,
+    onCheckedChange: (Boolean) -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onCheckedChange(!isChecked) },
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(2.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = Icons.Default.DeleteOutline,
+                    contentDescription = null,
+                    tint = if (isChecked) RedDanger else GrayText,
+                    modifier = Modifier.size(20.dp)
+                )
+                Spacer(modifier = Modifier.width(12.dp))
+                Text(
+                    text = "Tampilkan Pengguna Nonaktif",
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = if (isChecked) RedDanger else SlateText
+                )
+            }
+            Switch(
+                checked = isChecked,
+                onCheckedChange = onCheckedChange,
+                colors = SwitchDefaults.colors(
+                    checkedThumbColor = Color.White,
+                    checkedTrackColor = RedDanger,
+                ),
+                modifier = Modifier.scale(0.8f)
             )
         }
     }

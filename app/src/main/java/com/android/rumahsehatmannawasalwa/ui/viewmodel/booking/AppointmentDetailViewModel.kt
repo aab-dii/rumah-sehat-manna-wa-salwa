@@ -1,88 +1,168 @@
 package com.android.rumahsehatmannawasalwa.ui.viewmodel.booking
 
+import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.android.rumahsehatmannawasalwa.data.api.RetrofitClient
-import com.android.rumahsehatmannawasalwa.data.model.booking.ApiBooking
+import com.android.rumahsehatmannawasalwa.data.ApiResult
+import com.android.rumahsehatmannawasalwa.data.mapper.BookingMapper
 import com.android.rumahsehatmannawasalwa.data.model.booking.BookingRequest
+import com.android.rumahsehatmannawasalwa.data.model.booking.BookingUiModel
+import com.android.rumahsehatmannawasalwa.data.repository.AppointmentRepository
+import com.android.rumahsehatmannawasalwa.data.service.PusherService
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-sealed class DetailUiState {
-    object Loading : DetailUiState()
-    data class Success(val booking: ApiBooking) : DetailUiState()
-    data class Error(val message: String) : DetailUiState()
-}
 
-class AppointmentDetailViewModel : ViewModel() {
+class AppointmentDetailViewModel(private val repository: AppointmentRepository) : ViewModel() {
 
-    private val _uiState = MutableStateFlow<DetailUiState>(DetailUiState.Loading)
-    val uiState: StateFlow<DetailUiState> = _uiState.asStateFlow()
+    private val _detailState = MutableStateFlow<ApiResult<BookingUiModel>>(ApiResult.Loading)
+    val detailState = _detailState.asStateFlow()
 
     private val _updateStatusState = MutableStateFlow<Result<String>?>(null)
     val updateStatusState: StateFlow<Result<String>?> = _updateStatusState.asStateFlow()
+
+    private val _isUpdating = MutableStateFlow(false)
+    val isUpdating: StateFlow<Boolean> = _isUpdating.asStateFlow()
+
+    private val _actionMessage = MutableStateFlow<String?>(null)
+    val actionMessage = _actionMessage.asStateFlow()
+
+    // Job untuk real-time subscription agar bisa di-cancel saat unsubscribe
+    private var realtimeJob: Job? = null
 
     fun resetUpdateState() {
         _updateStatusState.value = null
     }
 
-    fun fetchBookingDetail(id: Int) {
+    fun resetActionMessage() {
+        _actionMessage.value = null
+    }
+
+    fun getAppointmentDetail(id: Int) {
         viewModelScope.launch {
-            _uiState.value = DetailUiState.Loading
-            try {
-                val response = RetrofitClient.instance.getBookingDetail(id)
-                android.util.Log.d("BookingDetail", "Response Code: ${response.code()}, Message: ${response.message()}")
-                if (response.isSuccessful && response.body() != null) {
-                    val body = response.body()!!
-                    android.util.Log.d("BookingDetail", "Data received: ${body.data}")
-                    _uiState.value = DetailUiState.Success(body.data)
-                } else {
-                    val errorMsg = response.errorBody()?.string() ?: "Unknown error"
-                    android.util.Log.e("BookingDetail", "Failed to fetch: $errorMsg")
-                    _uiState.value = DetailUiState.Error("Gagal memuat data: ${response.message()} ($errorMsg)")
+            repository.fetchAppointmentDetail(id).collect { result ->
+                when (result) {
+                    is ApiResult.Loading -> _detailState.value = ApiResult.Loading
+                    is ApiResult.Success -> {
+                        val role = repository.getUserRole()
+                        val mapped = BookingMapper.mapToUiModel(result.data, role)
+                        _detailState.value = ApiResult.Success(mapped)
+                    }
+                    is ApiResult.Error -> _detailState.value = ApiResult.Error(result.error)
                 }
-            } catch (e: Exception) {
-                android.util.Log.e("BookingDetail", "Exception: ${e.message}", e)
-                _uiState.value = DetailUiState.Error("Error: ${e.localizedMessage}")
             }
         }
     }
 
-    fun updateBookingStatus(bookingId: Int, newStatus: String) {
-        val currentState = _uiState.value
-        if (currentState !is DetailUiState.Success) return
+    // ── Real-time Pusher Subscription ────────────────────────────────────
+    fun subscribeToRealTimeUpdate(bookingId: Int) {
+        // Subscribe ke channel spesifik booking ini
+        PusherService.subscribeToBooking(bookingId) {}
 
-        val currentBooking = currentState.booking
-
-        viewModelScope.launch {
-            try {
-                // Construct request with existing data but new status
-                // Check if backend supports partial update or needs full object.
-                // Assuming existing 'updateBooking' endpoint requires full body.
-                val request = BookingRequest(
-                    patientId = currentBooking.patientId,
-                    serviceId = currentBooking.serviceId,
-                    therapistId = currentBooking.therapistId,
-                    bookingDate = currentBooking.bookingDate,
-                    bookingTime = currentBooking.bookingTime,
-                    totalPrice = currentBooking.totalPrice,
-                    status = newStatus
-                )
-
-                val response = RetrofitClient.instance.updateBooking(bookingId, request)
-                if (response.isSuccessful) {
-                    _updateStatusState.value = Result.success("Status berhasil diperbarui ke $newStatus")
-                    // Refresh data
-                    fetchBookingDetail(bookingId)
-                } else {
-                    _updateStatusState.value = Result.failure(Exception("Gagal update: ${response.message()}"))
+        // Collect dari global flow, filter hanya booking yang relevan
+        realtimeJob?.cancel()
+        realtimeJob = viewModelScope.launch {
+            PusherService.bookingUpdateFlow.collect { event ->
+                if (event.id == bookingId) {
+                    // Auto-refresh detail saat ada update dari Pusher
+                    getAppointmentDetail(bookingId)
                 }
-            } catch (e: Exception) {
-                _updateStatusState.value = Result.failure(e)
             }
         }
+    }
+
+    fun unsubscribeFromRealTimeUpdate(bookingId: Int) {
+        realtimeJob?.cancel()
+        realtimeJob = null
+        PusherService.unsubscribeFromBooking(bookingId)
+    }
+
+    fun updateBookingStatus(bookingId: Int, newStatus: String) {
+        viewModelScope.launch {
+            _isUpdating.value = true
+
+            val result = repository.updateBookingStatus(bookingId, newStatus)
+
+            if (result is ApiResult.Success) {
+                _actionMessage.value = "Status berhasil diubah ke $newStatus"
+                getAppointmentDetail(bookingId)
+            } else if (result is ApiResult.Error) {
+                _actionMessage.value = "Gagal: ${result.error}"
+            }
+            _isUpdating.value = false
+        }
+    }
+
+    fun rejectPayment(bookingId: Int, reason: String) {
+        viewModelScope.launch {
+           _isUpdating.value = true
+            val result = repository.rejectPayment(bookingId, reason)
+
+            if (result is ApiResult.Success){
+                _actionMessage.value = "Pembayaran berhasil ditolak"
+                getAppointmentDetail(bookingId)
+            } else if (result is ApiResult.Error) {
+                _actionMessage.value = "Gagal menolak: ${result.error}"
+            }
+            _isUpdating.value = false
+        }
+    }
+
+    fun acceptPayment(bookingId: Int) {
+        viewModelScope.launch {
+            _isUpdating.value = true
+            val result = repository.acceptPayment(bookingId)
+
+            if (result is ApiResult.Success) {
+                _actionMessage.value = "Pembayaran diterima, booking dikonfirmasi!"
+                getAppointmentDetail(bookingId)
+            } else if (result is ApiResult.Error) {
+                _actionMessage.value = "Gagal menerima: ${result.error}"
+            }
+            _isUpdating.value = false
+        }
+    }
+
+    fun forceComplete(bookingId: Int) {
+        updateBookingStatus(bookingId, "force_completed")
+    }
+
+    fun cancelBooking(bookingId: Int) {
+        viewModelScope.launch {
+            _isUpdating.value = true
+
+            val result = repository.cancelBooking(bookingId)
+
+            if (result is ApiResult.Success) {
+                _actionMessage.value = "Booking berhasil dibatalkan"
+                getAppointmentDetail(bookingId)
+            } else if (result is ApiResult.Error) {
+                _actionMessage.value = "Gagal membatalkan: ${result.error}"
+            }
+            _isUpdating.value = false
+        }
+    }
+
+    fun reuploadProof(bookingId: Int, uri: Uri) {
+        viewModelScope.launch {
+            _isUpdating.value = true
+            val result = repository.reuploadProof(bookingId, uri)
+
+            if (result is ApiResult.Success) {
+                _actionMessage.value = "Bukti transfer berhasil diunggah ulang"
+                getAppointmentDetail(bookingId)
+            } else if (result is ApiResult.Error) {
+                _actionMessage.value = "Gagal mengunggah bukti: ${result.error}"
+            }
+            _isUpdating.value = false
+        }
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        realtimeJob?.cancel()
     }
 }

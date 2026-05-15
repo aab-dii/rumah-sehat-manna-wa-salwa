@@ -1,40 +1,57 @@
 package com.android.rumahsehatmannawasalwa.ui.viewmodel.booking
 
-
+import android.app.Application
+import android.net.Uri
 import android.util.Log
-import androidx.lifecycle.ViewModel
+import androidx.compose.runtime.*
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.paging.Pager
 import androidx.paging.PagingConfig
 import androidx.paging.cachedIn
-import com.android.rumahsehatmannawasalwa.data.api.RetrofitClient
+import com.android.rumahsehatmannawasalwa.data.ApiResult
+import com.android.rumahsehatmannawasalwa.data.model.auth.User
 import com.android.rumahsehatmannawasalwa.data.model.booking.BookingRequest
-import com.android.rumahsehatmannawasalwa.data.repository.BookingPagingSource
+import com.android.rumahsehatmannawasalwa.data.model.booking.CreateAppointment
+import com.android.rumahsehatmannawasalwa.data.model.service.Service
+import com.android.rumahsehatmannawasalwa.data.repository.AppointmentRepository
+import com.android.rumahsehatmannawasalwa.ui.state.BookingUiState
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import com.android.rumahsehatmannawasalwa.data.ApiResult
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.map
-import com.android.rumahsehatmannawasalwa.data.model.booking.ApiBooking
-import com.android.rumahsehatmannawasalwa.data.model.service.Layanan
-import com.android.rumahsehatmannawasalwa.data.model.auth.User
-import com.android.rumahsehatmannawasalwa.ui.state.BookingUiState
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
+import okhttp3.RequestBody
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.update
 
-class AdminBookingViewModel : ViewModel() {
+class AdminBookingViewModel(
+    application: Application,
+    private val repository: AppointmentRepository
+) : AndroidViewModel(application) {
 
+    var isUserAdmin by mutableStateOf(false)
     // --- Filter States ---
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
 
-    private val _selectedTab = MutableStateFlow(0) // 0 = Upcoming, 1 = History
+    private val _refreshTrigger = MutableStateFlow(0)
+
+    // 0 = Upcoming, 1 = History
+    private val _selectedTab = MutableStateFlow(0)
     val selectedTab: StateFlow<Int> = _selectedTab.asStateFlow()
+
+    // Chip filter untuk tab "Akan Datang" (default: semua status upcoming)
+    private val _upcomingChipFilter = MutableStateFlow("pending,confirmed,waiting_payment,waiting_verification,payment_rejected")
+    val upcomingChipFilter: StateFlow<String> = _upcomingChipFilter.asStateFlow()
+
+    // Chip filter untuk tab "Riwayat" (default: semua status history)
+    private val _historyChipFilter = MutableStateFlow("completed,canceled,force_completed")
+    val historyChipFilter: StateFlow<String> = _historyChipFilter.asStateFlow()
 
     // UI State
     private val _uiState = MutableStateFlow(BookingUiState())
@@ -44,10 +61,19 @@ class AdminBookingViewModel : ViewModel() {
     private val _operationState = MutableStateFlow<ApiResult<String>?>(null)
     val operationState: StateFlow<ApiResult<String>?> = _operationState
 
+    // Payment States
+    private val _selectedPaymentOption = MutableStateFlow("cash") // cash, transfer
+    val selectedPaymentOption: StateFlow<String> = _selectedPaymentOption.asStateFlow()
+
+    private val _proofOfTransferUri = MutableStateFlow<Uri?>(null)
+    val proofOfTransferUri: StateFlow<Uri?> = _proofOfTransferUri.asStateFlow()
+
     init {
-        // If past closing time (20:00), default to tomorrow
-        if (java.time.LocalTime.now().isAfter(java.time.LocalTime.of(20, 0))) {
-            _uiState.update { it.copy(selectedDate = java.time.LocalDate.now().plusDays(1)) }
+        // Collect real-time booking updates dari PusherService via Repository
+        viewModelScope.launch {
+            repository.bookingUpdateFlow.collect { booking ->
+                 _refreshTrigger.value += 1
+            }
         }
     }
 
@@ -60,92 +86,43 @@ class AdminBookingViewModel : ViewModel() {
         _selectedTab.value = index
     }
 
-    // --- Pager Logic ---
-    // --- Pager Logic ---
-    
-    // Upcoming: Pending/Confirmed, ASC
-    @OptIn(ExperimentalCoroutinesApi::class)
-    val upcomingPager = _searchQuery.flatMapLatest { search ->
-        val searchParam = if (search.isBlank()) null else search
-        Pager(
-            config = PagingConfig(pageSize = 10, prefetchDistance = 1),
-            pagingSourceFactory = { 
-                BookingPagingSource(
-                    apiService = RetrofitClient.instance, 
-                    dateFilter = null,
-                    statusFilter = "pending,confirmed",
-                    searchQuery = searchParam,
-                    sortBy = "booking_date",
-                    sortOrder = "asc"
-                ) 
-            }
-        ).flow
-    }.cachedIn(viewModelScope)
+    fun setUpcomingChipFilter(value: String) {
+        _upcomingChipFilter.value = value
+    }
 
-    // History: Completed/Cancelled, DESC
-    @OptIn(ExperimentalCoroutinesApi::class)
-    val historyPager = _searchQuery.flatMapLatest { search ->
-        val searchParam = if (search.isBlank()) null else search
-        Pager(
-            config = PagingConfig(pageSize = 10, prefetchDistance = 1),
-            pagingSourceFactory = { 
-                BookingPagingSource(
-                    apiService = RetrofitClient.instance, 
-                    dateFilter = null,
-                    statusFilter = "completed,cancelled,batal,selesai",
-                    searchQuery = searchParam,
-                    sortBy = "booking_date",
-                    sortOrder = "desc"
-                ) 
-            }
-        ).flow
-    }.cachedIn(viewModelScope)
-
-    // --- State Updaters ---
+    fun setHistoryChipFilter(value: String) {
+        _historyChipFilter.value = value
+    }
 
     fun onPatientSelected(patient: User) {
         _uiState.update { it.copy(selectedPatient = patient, searchQuery = patient.name) }
     }
 
     fun onSearchQueryChanged(query: String) {
-         _uiState.update { it.copy(searchQuery = query) }
-         // Note: Searching is handled by Screen's LaunchEffect or filtering internally if list is local.
-         // Assumption: User list is passed from AdminUserViewModel. Logic remains there or passed here.
-    }
-
-    fun setServices(services: List<Layanan>) {
-        _uiState.update { it.copy(serviceList = services) }
-    }
-
-    fun onServiceSelected(service: Layanan) {
-        _uiState.update { 
-            it.copy(
-                selectedService = service,
-                selectedTherapist = null, // Reset dependent fields
-                selectedTimeSlot = null,
-                filteredTherapists = filterTherapists(it.therapistList, service)
-            ) 
-        }
-    }
-
-    fun setTherapists(therapists: List<User>) {
-        val currentService = _uiState.value.selectedService
-        val filtered = if (currentService != null) filterTherapists(therapists, currentService) else emptyList()
-        _uiState.update { it.copy(therapistList = therapists, filteredTherapists = filtered) }
-    }
-
-    private fun filterTherapists(therapists: List<User>, service: Layanan): List<User> {
-        return therapists.filter { therapist ->
-            therapist.role == "terapis" && (
-                therapist.specialization.isEmpty() || 
-                therapist.specialization.any { spec -> spec.contains(service.nama, ignoreCase = true) }
-            )
-        }
+        _uiState.update { it.copy(searchQuery = query) }
     }
 
     fun onTherapistSelected(therapist: User) {
         _uiState.update { it.copy(selectedTherapist = therapist, selectedTimeSlot = null) }
+        fetchTherapistSchedule(therapist.id)
+        
+        // Fetch availability for the next 14 days
+        val startDate = LocalDate.now()
+        val endDate = startDate.plusDays(13)
+        fetchAvailability(therapist.id, startDate, endDate)
+        
         fetchTimeSlots()
+    }
+
+    fun onServiceSelected(service: Service) {
+        _uiState.update {
+            it.copy(
+                selectedService = service,
+                selectedTherapist = null,
+                selectedTimeSlot = null,
+                filteredTherapists = filterTherapists(it.therapistList, service)
+            )
+        }
     }
 
     fun onDateSelected(date: LocalDate) {
@@ -157,100 +134,197 @@ class AdminBookingViewModel : ViewModel() {
         _uiState.update { it.copy(selectedTimeSlot = slot) }
     }
 
+    fun onPaymentOptionSelected(option: String) {
+        _selectedPaymentOption.value = option
+    }
+
+    fun onProofSelected(uri: Uri?) {
+        _proofOfTransferUri.value = uri
+    }
+
+    fun setTherapists(therapists: List<User>) {
+        val currentService = _uiState.value.selectedService
+        val filtered = if (currentService != null) filterTherapists(therapists, currentService) else emptyList()
+        _uiState.update { it.copy(therapistList = therapists, filteredTherapists = filtered) }
+    }
+
+    fun refreshBookings() {
+        _refreshTrigger.value += 1
+    }
+
+    // Upcoming: statuses dikendalikan chip, ASC
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val upcomingPager = combine(_searchQuery, _refreshTrigger, _upcomingChipFilter) { query, _, chip -> Pair(query, chip) }
+        .flatMapLatest { (query, chip) ->
+            createPager(status = chip, search = query)
+        }.cachedIn(viewModelScope)
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val historyPager = combine(_searchQuery, _refreshTrigger, _historyChipFilter) { query, _, chip -> Pair(query, chip) }
+        .flatMapLatest { (query, chip) ->
+            createPager(status = chip, search = query, order = "desc")
+        }.cachedIn(viewModelScope)
+
+    private fun createPager(status: String, search: String, order: String = "asc") = Pager(
+        config = PagingConfig(pageSize = 10),
+        pagingSourceFactory = {
+            repository.getPagingSource(
+                statusFilter = status,
+                searchQuery = search.ifBlank { null },
+                sortBy = "booking_date",
+                sortOrder = order,
+            )
+        }
+    ).flow
+
+    fun setServices(services: List<Service>) {
+        _uiState.update { it.copy(serviceList = services) }
+    }
+
+    private fun filterTherapists(therapists: List<User>?, service: Service): List<User> {
+        // 1. Cek dulu apakah list therapists-nya null
+        if (therapists == null) return emptyList()
+
+        return therapists.filter { therapist ->
+            // 2. Ambil specialization secara aman
+            val specs = therapist.specialization ?: emptyList() // Jika null, anggap list kosong
+
+            therapist.role == "terapis" && (
+                    specs.isEmpty() ||
+                            specs.any { spec -> spec.contains(service.name, ignoreCase = true) }
+                    )
+        }
+    }
+
+    private fun fetchTherapistSchedule(therapistId: Int) {
+        viewModelScope.launch {
+            when (val result = repository.getTherapistSchedule(therapistId)) {
+                is ApiResult.Success -> {
+                    val scheduleData = result.data
+                    _uiState.update { it.copy(
+                        holidayInfo = scheduleData.holidayInfo,
+                        activeDays = scheduleData.activeDays
+                    )}
+                }
+                is ApiResult.Error -> { /* handle error */ }
+                else -> {}
+            }
+        }
+    }
+
+    private fun fetchAvailability(therapistId: Int, start: LocalDate, end: LocalDate) {
+        val service = _uiState.value.selectedService ?: return
+
+        viewModelScope.launch {
+            val result = repository.checkAvailability(
+                therapistId,
+                start.toString(),
+                end.toString(),
+                service.id
+            )
+
+            when (result) {
+                is ApiResult.Success -> {
+                    _uiState.update { it.copy(availabilityMap = result.data) }
+                }
+                is ApiResult.Error -> {
+                    _uiState.update { it.copy(availabilityError = result.error) }
+                    Log.e("AdminBookingVM", "Availability Error: ${result.error}")
+                }
+                else -> {}
+            }
+        }
+    }
+
     private fun fetchTimeSlots() {
         val state = _uiState.value
-        if (state.selectedTherapist == null || state.selectedService == null) return
+        if (state.selectedTherapist == null || state.selectedService == null || state.selectedDate == null) return
 
         viewModelScope.launch {
             _uiState.update { it.copy(isLoadingSlots = true) }
-            try {
-                val dateStr = state.selectedDate.format(DateTimeFormatter.ISO_LOCAL_DATE) // YYYY-MM-DD
-                val response = RetrofitClient.instance.getAvailableSlots(
-                    therapistId = state.selectedTherapist.id,
-                    date = dateStr,
-                    serviceId = state.selectedService.id
-                )
+            val dateStr = state.selectedDate.format(DateTimeFormatter.ISO_LOCAL_DATE)
 
-                if (response.isSuccessful && response.body() != null) {
-                    val slots = response.body()!!.data
-                    _uiState.update { it.copy(availableTimeSlots = slots, isLoadingSlots = false) }
-                } else {
-                    _uiState.update { it.copy(isLoadingSlots = false, error = "Gagal memuat jadwal: ${response.message()}") }
+            val result = repository.getAvailableSlots(
+                therapistId = state.selectedTherapist.id,
+                date = dateStr,
+                serviceId = state.selectedService.id
+            )
+
+            when (result) {
+                is ApiResult.Success -> _uiState.update { it.copy(availableTimeSlots = result.data.slots, isLoadingSlots = false)
                 }
-            } catch (e: Exception) {
-                _uiState.update { it.copy(isLoadingSlots = false, error = "Error: ${e.localizedMessage}") }
+
+                is ApiResult.Error -> _uiState.update { it.copy(isLoadingSlots = false, error = result.error) }
+                else -> {}
             }
         }
     }
 
     // --- CRUD ---
-
     fun createBooking() {
-         val state = _uiState.value
-         if (!state.isFormValid) return
+        val state = _uiState.value
+        if (!state.isFormValid) return
 
-         viewModelScope.launch {
+        viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
-            try {
-                val request = BookingRequest(
-                    patientId = state.selectedPatient!!.id,
-                    serviceId = state.selectedService!!.id,
-                    therapistId = state.selectedTherapist!!.id,
-                    bookingDate = state.selectedDate.format(DateTimeFormatter.ISO_LOCAL_DATE),
-                    bookingTime = state.selectedTimeSlot!!,
-                    totalPrice = state.selectedService.harga
-                )
-                
-                // Assuming createBooking in API returns 201 on success
-                val response = RetrofitClient.instance.createBooking(request)
-                if (response.isSuccessful) {
-                    _operationState.value = ApiResult.Success("Booking berhasil dibuat!")
+
+            val params = CreateAppointment(
+                patientId = state.selectedPatient!!.id,
+                serviceId = state.selectedService!!.id,
+                therapistId = state.selectedTherapist!!.id,
+                date = state.selectedDate!!.format(DateTimeFormatter.ISO_LOCAL_DATE),
+                time = state.selectedTimeSlot!!,
+                price = state.selectedService.price,
+                paymentOption = _selectedPaymentOption.value,
+                proofUri = _proofOfTransferUri.value
+            )
+
+            when (val result = repository.createAppointment(params)) {
+                is ApiResult.Success -> {
+                    _operationState.value = ApiResult.Success("Booking berhasil!")
                     _uiState.update { it.copy(isLoading = false, isBookingSuccess = true) }
-                } else {
-                    _operationState.value = ApiResult.Error("Gagal: ${response.errorBody()?.string()}")
+                }
+                is ApiResult.Error -> {
+                    _operationState.value = ApiResult.Error(result.error)
                     _uiState.update { it.copy(isLoading = false) }
                 }
-            } catch (e: Exception) {
-                _operationState.value = ApiResult.Error(e.message ?: "Unknown Error")
-                 _uiState.update { it.copy(isLoading = false) }
+                else -> {}
             }
         }
     }
 
-    // Legacy Update/Delete kept...
     fun updateBooking(id: Int, request: BookingRequest) {
         viewModelScope.launch {
-            try {
-                Log.d("AdminBookingViewModel", "Updating booking $id")
-                val response = RetrofitClient.instance.updateBooking(id, request)
-                if (response.isSuccessful) {
-                    _operationState.value = ApiResult.Success("Booking updated successfully")
-                } else {
-                    _operationState.value = ApiResult.Error("Failed: ${response.message()}")
-                }
-            } catch (e: Exception) {
-                _operationState.value = ApiResult.Error(e.message ?: "Unknown Error")
+            when (val result = repository.updateBooking(id, request)) {
+                is ApiResult.Success -> _operationState.value = ApiResult.Success("Booking updated successfully")
+                is ApiResult.Error -> _operationState.value = ApiResult.Error(result.error)
+                else -> {}
             }
         }
     }
 
-//    fun deleteBooking(id: Int) {
-//        viewModelScope.launch {
-//            try {
-//                val response = RetrofitClient.instance.deleteBooking(id)
-//                if (response.isSuccessful) {
-//                    _operationState.value = ApiResult.Success("Booking deleted successfully")
-//                } else {
-//                    _operationState.value = ApiResult.Error("Failed to delete: ${response.message()}")
-//                }
-//            } catch (e: Exception) {
-//                _operationState.value = ApiResult.Error(e.message ?: "Unknown Error")
-//            }
-//        }
-//    }
+    fun updateBookingStatus(id: Int, status: String) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true) }
+            when (val result = repository.updateBookingStatus(id, status)) {
+                is ApiResult.Success -> {
+                    _operationState.value = ApiResult.Success("Status updated successfully")
+                    _uiState.update { it.copy(isLoading = false) }
+                    refreshBookings() // Auto-refresh data
+                }
+                is ApiResult.Error -> {
+                    _operationState.value = ApiResult.Error(result.error)
+                    _uiState.update { it.copy(isLoading = false) }
+                }
+                else -> {}
+            }
+        }
+    }
 
     fun resetState() {
         _operationState.value = null
-        _uiState.update { BookingUiState() } // Reset UI
+        _uiState.update { BookingUiState() }
+        _selectedPaymentOption.value = "cash"
+        _proofOfTransferUri.value = null
     }
 }

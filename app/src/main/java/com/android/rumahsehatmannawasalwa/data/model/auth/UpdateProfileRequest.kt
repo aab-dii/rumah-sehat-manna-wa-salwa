@@ -9,5 +9,6 @@ data class UpdateProfileRequest(
     @SerializedName("alamat") val alamat: String,
     @SerializedName("tgl_lahir") val tglLahir: String,
     @SerializedName("jenis_kelamin") val jenisKelamin: String,
+    @SerializedName("foto_url") val fotoUrl: String? = null,
     @SerializedName("specialization") val specialization: List<String>? = null
 )

@@ -34,7 +34,7 @@ class ScheduleViewModel(application: Application) : AndroidViewModel(application
                         _schedules.value = data
                         _scheduleState.value = ApiResult.Success(data)
                     } else {
-                        _scheduleState.value = ApiResult.Error(result.meta.message)
+                        _scheduleState.value = result.meta.message?.let { ApiResult.Error(it) }!!
                     }
                 } else {
                     _scheduleState.value = ApiResult.Error("Gagal mengambil jadwal: ${response.message()}")
@@ -45,7 +45,10 @@ class ScheduleViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
-    fun updateSchedule(therapistId: Int, day: String, startTime: String, endTime: String, isActive: Boolean) {
+    fun updateSchedule(
+        therapistId: Int, day: String, startTime: String, endTime: String, isActive: Boolean,
+        onSuccess: (String) -> Unit, onError: (String) -> Unit
+    ) {
         viewModelScope.launch {
             try {
                 val request = UpdateScheduleRequest(
@@ -57,19 +60,21 @@ class ScheduleViewModel(application: Application) : AndroidViewModel(application
                 )
                 val response = api.updateSchedule(request)
                 if (response.isSuccessful && response.body() != null) {
-                    Toast.makeText(getApplication(), "Jadwal $day tersimpan", Toast.LENGTH_SHORT).show()
-                    // Refresh current list logic
-                    fetchSchedules(therapistId)
+                    onSuccess("Jadwal hari $day berhasil ${if(isActive) "beroperasi" else "diliburkan"}")
                 } else {
-                    Toast.makeText(getApplication(), "Gagal menyimpan: ${response.message()}", Toast.LENGTH_SHORT).show()
+                    val errMsg = response.errorBody()?.string() ?: response.message()
+                    onError("Gagal menyimpan: $errMsg")
                 }
             } catch (e: Exception) {
-                Toast.makeText(getApplication(), "Error: ${e.message}", Toast.LENGTH_SHORT).show()
+                onError("Error: ${e.message}")
             }
         }
     }
 
-    fun emergencyClose(therapistId: Int, date: String, reason: String, onSuccess: () -> Unit) {
+    fun emergencyClose(
+        therapistId: Int, date: String, reason: String, 
+        onSuccess: (String) -> Unit, onError: (String) -> Unit
+    ) {
         viewModelScope.launch {
             try {
                 val request = com.android.rumahsehatmannawasalwa.data.model.schedule.EmergencyCloseRequest(
@@ -80,14 +85,13 @@ class ScheduleViewModel(application: Application) : AndroidViewModel(application
                 val response = api.emergencyClose(request)
                 if (response.isSuccessful && response.body() != null) {
                      val count = response.body()!!.data.cancelledCount
-                     Toast.makeText(getApplication(), "Berhasil menutup jadwal. $count booking dibatalkan.", Toast.LENGTH_LONG).show()
-                     onSuccess()
+                     onSuccess("Berhasil menutup jadwal. $count booking dibatalkan.")
                 } else {
                     val errMsg = response.errorBody()?.string() ?: response.message()
-                    Toast.makeText(getApplication(), "Gagal menutup jadwal: $errMsg", Toast.LENGTH_SHORT).show()
+                    onError("Gagal menutup jadwal: $errMsg")
                 }
             } catch (e: Exception) {
-                Toast.makeText(getApplication(), "Error: ${e.message}", Toast.LENGTH_SHORT).show()
+                onError("Error: ${e.message}")
             }
         }
     }
@@ -105,7 +109,7 @@ class ScheduleViewModel(application: Application) : AndroidViewModel(application
                 if (response.isSuccessful && response.body() != null) {
                     val count = response.body()!!.data.cancelledBookings
                     Toast.makeText(getApplication(), "Libur ditambahkan. $count booking dibatalkan.", Toast.LENGTH_LONG).show()
-                    fetchSchedules(therapistId) // Refresh to show new holidays
+//                    fetchSchedules(therapistId) // Refresh to show new holidays
                     onSuccess()
                 } else {
                     val errMsg = response.errorBody()?.string() ?: response.message()

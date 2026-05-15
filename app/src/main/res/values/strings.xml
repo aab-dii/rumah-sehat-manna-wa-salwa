@@ -1,3 +1,10 @@
 <resources>
     <string name="app_name">Rumah Sehat Manna wa Salwa</string>
+    <string name="patient">Pasien</string>
+    <string name="therapist">Terapis</string>
+    <string name="back">Kembali</string>
+    <string name="manage_services">Kelola Layanan</string>
+    <string name="add_services">Tambah Layanan</string>
+    <string name="manage_users">Kelola Pengguna</string>
+    <string name="manage_appointment">Kelola Janji Temu</string>
 </resources>

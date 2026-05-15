@@ -5,7 +5,7 @@ import com.google.gson.annotations.SerializedName
 data class Schedule(
     val id: Int,
     @SerializedName("therapist_id") val therapistId: Int,
-    val day: String, // Senin, Selasa, ...
+    val day: String,
     @SerializedName("start_time") val startTime: String, // H:i
     @SerializedName("end_time") val endTime: String, // H:i
     @SerializedName("is_active") val isActive: Boolean,

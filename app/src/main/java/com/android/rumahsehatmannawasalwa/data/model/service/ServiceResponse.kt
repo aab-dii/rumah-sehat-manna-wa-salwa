@@ -4,5 +4,5 @@ import com.android.rumahsehatmannawasalwa.data.model.common.Pagination
 import com.google.gson.annotations.SerializedName
 
 data class ServiceResponse(
-    @SerializedName("data") val data: Pagination<Layanan>
+    @SerializedName("data") val data: Pagination<Service>
 )

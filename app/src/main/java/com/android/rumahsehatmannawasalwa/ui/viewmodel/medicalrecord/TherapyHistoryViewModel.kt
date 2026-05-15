@@ -3,7 +3,7 @@ package com.android.rumahsehatmannawasalwa.ui.viewmodel.medicalrecord // Using e
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.android.rumahsehatmannawasalwa.data.api.RetrofitClient
-import com.android.rumahsehatmannawasalwa.data.model.medicalrecord.TherapyHistory
+import com.android.rumahsehatmannawasalwa.data.model.medicalrecord.TherapyHistorySummary
 import com.android.rumahsehatmannawasalwa.data.ApiResult
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -11,8 +11,8 @@ import kotlinx.coroutines.launch
 import android.util.Log
 
 class TherapyHistoryViewModel : ViewModel() {
-    private val _historyList = MutableStateFlow<List<TherapyHistory>>(emptyList())
-    val historyList: StateFlow<List<TherapyHistory>> = _historyList
+    private val _historyList = MutableStateFlow<List<TherapyHistorySummary>>(emptyList())
+    val historyList: StateFlow<List<TherapyHistorySummary>> = _historyList
 
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading
@@ -30,22 +30,27 @@ class TherapyHistoryViewModel : ViewModel() {
     
     // Let's add the fetch function assuming the endpoint exists or will be added.
     
-    fun fetchTherapyHistory() {
-        viewModelScope.launch {
-            _isLoading.value = true
-            try {
-                val response = RetrofitClient.instance.getTherapyHistory(page = 1)
-                
-                if (response.isSuccessful && response.body() != null) {
-                    _historyList.value = response.body()!!.data.data
-                } else {
-                    Log.e("TherapyHistoryVM", "Failed: ${response.message()}")
-                }
-            } catch (e: Exception) {
-                Log.e("TherapyHistoryVM", "Error", e)
-            } finally {
-                _isLoading.value = false
-            }
-        }
-    }
+    private var isDataLoaded = false
+
+//    fun fetchTherapyHistory(forceRefresh: Boolean = false) {
+//        if (isDataLoaded && !forceRefresh) return
+//
+//        viewModelScope.launch {
+//            _isLoading.value = true
+//            try {
+//                val response = RetrofitClient.instance.getTherapyHistory(page = 1)
+//
+//                if (response.isSuccessful && response.body() != null) {
+//                    _historyList.value = response.body()!!.data.data
+//                    isDataLoaded = true
+//                } else {
+//                    Log.e("TherapyHistoryVM", "Failed: ${response.message()}")
+//                }
+//            } catch (e: Exception) {
+//                Log.e("TherapyHistoryVM", "Error", e)
+//            } finally {
+//                _isLoading.value = false
+//            }
+//        }
+//    }
 }

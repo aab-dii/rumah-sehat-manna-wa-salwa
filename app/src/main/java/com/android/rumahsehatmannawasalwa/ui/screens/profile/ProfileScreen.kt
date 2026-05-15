@@ -4,18 +4,19 @@ import androidx.compose.foundation.BorderStroke
 import com.android.rumahsehatmannawasalwa.ui.viewmodel.auth.AuthViewModel
 import com.android.rumahsehatmannawasalwa.ui.components.BottomNavigationBar
 import com.android.rumahsehatmannawasalwa.ui.theme.*
+import com.android.rumahsehatmannawasalwa.ui.components.auth.ProfilePhoto
+import com.android.rumahsehatmannawasalwa.ui.components.dialog.CustomConfirmDialog
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.ChevronRight
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.ExitToApp
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Lock
@@ -23,181 +24,194 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.zIndex
 import androidx.navigation.NavController
-import androidx.navigation.compose.rememberNavController
+import coil.compose.AsyncImage
+import com.android.rumahsehatmannawasalwa.ui.components.layouts.MannaSheet
 
 @Composable
 fun ProfileScreen(
     navController: NavController,
     viewModel: AuthViewModel
 ) {
-    // Collect User Data
     val user by viewModel.currentUserData.collectAsState()
-    val authState by viewModel.authState.collectAsState()
+    val isNotificationEnabled by viewModel.isNotificationEnabled.collectAsState()
+    var showLogoutConfirm by remember { mutableStateOf(false) }
 
-    // Fetch on Init
-    LaunchedEffect(Unit) {
-        viewModel.fetchUserProfile()
-    }
+    // Menghapus fetchUserProfile otomatis agar tidak membebani server/sync berlebihan
+    // Data diambil dari StateFlow currentUserData yang sudah diinisialisasi dengan data lokal
 
-    // State
-    var isNotificationEnabled by remember { mutableStateOf(true) }
-
-    Scaffold(
-        containerColor = Color(0xFFEFEFEF), // #FAFFF9
-        bottomBar = {
-            BottomNavigationBar(navController = navController)
-        }
-    ) { paddingValues ->
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(BackgroundWhite)
+    ) {
+        // ── SCROLLABLE CONTENT ──────────────────────────────────────────────
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues)
+                .verticalScroll(rememberScrollState())
         ) {
-            // --- 1. Custom Header (Full Width) ---
+            // 1. GREEN GRADIENT HEADER with Avatar
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(Color.White) // Atau GreenPrimary.copy(alpha=0.1f) untuk ijo pudar
-                    .padding(vertical = 32.dp, horizontal = 24.dp),
+                    .height(200.dp)
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(GreenDark, GreenPrimary, GreenLight)
+                        )
+                    ),
                 contentAlignment = Alignment.Center
             ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    // Avatar
-                    Surface(
-                        shape = CircleShape,
-                        color = BackgroundLight, // Hijau sangat muda
-                        border = BorderStroke(2.dp, GreenPrimary),
-                        modifier = Modifier.size(100.dp)
-                    ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Icon(
-                                imageVector = Icons.Default.Person,
-                                contentDescription = "Avatar",
-                                tint = GreenPrimary,
-                                modifier = Modifier.size(50.dp)
-                            )
-                        }
+                // Profile Avatar menggunakan komponen baru
+                val activeUser = user
+                val photoUrl = when {
+                    // 1. Cek dari Google dulu
+                    !activeUser?.fotoUrl.isNullOrBlank() -> activeUser?.fotoUrl
+                    
+                    // 2. Kalau Google null, baru ambil dari Database
+                    !activeUser?.profilePhotoPath.isNullOrBlank() -> {
+                        val baseUrl = com.android.rumahsehatmannawasalwa.BuildConfig.BASE_URL
+                        val storageUrl = baseUrl.replace("/api/", "/storage/")
+                        "$storageUrl${activeUser?.profilePhotoPath}"
                     }
-                    
-                    Spacer(modifier = Modifier.height(16.dp))
-                    
-                    // Nama & Email
+                    else -> null
+                }
+
+                ProfilePhoto(
+                    photoUrl = photoUrl,
+                    size = 110.dp,
+                    modifier = Modifier.statusBarsPadding()
+                )
+            }
+
+            // 2. WHITE SHEET (overlapping green header)
+            MannaSheet(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .offset(y = (-30).dp)
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 24.dp)
+                        .padding(top = 28.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    // ── User Info (Centered) ────────────────────────────────
                     Text(
                         text = user?.name ?: "Pengguna",
-                        style = MaterialTheme.typography.headlineSmall, // H2/H3
+                        style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold,
-                        color = Color.Black
+                        color = SlateTextDark,
+                        fontSize = 22.sp
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = user?.email ?: "Memuat...",
+                        text = user?.email ?: "",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = Color.Gray
+                        color = BodyGray
                     )
-                     Text(
-                        text = user?.phoneNumber ?: "",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = Color.Gray
-                    )
-                }
-            }
-            
-            Divider(color = DividerColor, thickness = 1.dp)
+                    if (!user?.phoneNumber.isNullOrEmpty()) {
+                        Text(
+                            text = user?.phoneNumber ?: "",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = BodyGray
+                        )
+                    }
 
-            // --- 2. Menu Options ---
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f) // Isi sisa space
-                    .padding(top = 8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                // Item 1: Ubah Profil -> Navigasi ke ProfileDetail (Halaman Lama)
-                item {
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(containerColor = Color.White),
-                        shape = RectangleShape
-                    ) {
-                        Column {
-                            // Data Pribadi
-                            ProfileMenuItem(
-                                icon = Icons.Default.Person,
-                                title = "Data Pribadi",
-                                onClick = { navController.navigate("profile_detail") }
-                            )
-                            // Garis Pemisah
-                            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), thickness = 0.5.dp, color = Color.LightGray)
-                            // Keamanan
-                            ProfileMenuItem(
-                                icon = Icons.Default.Lock,
-                                title = "Ubah Kata Sandi",
-                                onClick = { /* TODO: Navigate to Password Change */ }
+                    Spacer(modifier = Modifier.height(28.dp))
+                    HorizontalDivider(color = DividerLight, thickness = 1.dp)
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    // ── Menu Options ─────────────────────────────────────────
+                    // Data Pribadi & Ubah Kata Sandi
+                    ProfileMenuItem(
+                        icon = Icons.Default.Person,
+                        title = "Data Pribadi",
+                        onClick = { navController.navigate("profile_detail") }
+                    )
+                    HorizontalDivider(color = DividerLight, thickness = 1.dp)
+
+                    ProfileMenuItem(
+                        icon = Icons.Default.Lock,
+                        title = "Ubah Kata Sandi",
+                        onClick = { /* TODO */ }
+                    )
+                    HorizontalDivider(color = DividerLight, thickness = 1.dp)
+
+                    // Notifikasi Aplikasi
+                    ProfileMenuItem(
+                        icon = Icons.Default.Notifications,
+                        title = "Notifikasi Aplikasi",
+                        onClick = { viewModel.toggleNotification() },
+                        endWidget = {
+                            Switch(
+                                checked = isNotificationEnabled,
+                                onCheckedChange = { viewModel.setNotificationEnabled(it) },
+                                colors = SwitchDefaults.colors(
+                                    checkedThumbColor = Color.White,
+                                    checkedTrackColor = GreenPrimary,
+                                    uncheckedThumbColor = Color.LightGray,
+                                    uncheckedTrackColor = Color.Transparent
+                                ),
+                                modifier = Modifier.scale(0.8f)
                             )
                         }
-                    }
-                }
+                    )
+                    HorizontalDivider(color = DividerLight, thickness = 1.dp)
 
-                // Item 2: Notifikasi -> Toggle
-                item {
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(containerColor = Color.White),
-                        shape = RectangleShape
-                    ) {
-                        ProfileMenuItem(
-                            icon = Icons.Default.Notifications,
-                            title = "Notifikasi Aplikasi",
-                            onClick = { isNotificationEnabled = !isNotificationEnabled },
-                            endWidget = {
-                                Switch(
-                                    checked = isNotificationEnabled,
-                                    onCheckedChange = { isNotificationEnabled = it },
-                                    colors = SwitchDefaults.colors(
-                                        checkedThumbColor = Color.White,
-                                        checkedTrackColor = GreenPrimary,
-                                        uncheckedThumbColor = Color.LightGray,
-                                        uncheckedTrackColor = Color.Transparent
-                                    ),
-                                    modifier = Modifier.scale(0.8f)
-                                )
-                            }
-                        )
-                    }
-                }
+                    // Keluar Akun
+                    ProfileMenuItem(
+                        icon = Icons.AutoMirrored.Filled.ExitToApp,
+                        title = "Keluar Akun",
+                        textColor = RedDanger,
+                        iconColor = RedDanger,
+                        onClick = { showLogoutConfirm = true }
+                    )
+                    HorizontalDivider(color = DividerLight, thickness = 1.dp)
 
-                // Item 4: Logout -> Special Style
-                item {
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(containerColor = Color.White),
-                        shape = RectangleShape
-                    ) {
-                        ProfileMenuItem(
-                            icon = Icons.AutoMirrored.Filled.ExitToApp,
-                            title = "Keluar Akun",
-                            showChevron = true,
-                            onClick = {
-                                viewModel.logout()
-                                navController.navigate("login") {
-                                    popUpTo(0) { inclusive = true }
-                                }
-                            }
-                        )
-                    }
+                    // Bottom spacer for navbar
+                    Spacer(modifier = Modifier.height(120.dp))
                 }
             }
         }
+
+        // ── FLOATING BOTTOM NAV ─────────────────────────────────────────────
+        Box(
+            modifier = Modifier
+                .fillMaxSize(),
+            contentAlignment = Alignment.BottomCenter
+        ) {
+            BottomNavigationBar(navController = navController, role = user?.role ?: "patient")
+        }
+
+        // ── LOGOUT CONFIRMATION DIALOG ──────────────────────────────────────
+        CustomConfirmDialog(
+            show = showLogoutConfirm,
+            onDismiss = { showLogoutConfirm = false },
+            onConfirm = {
+                showLogoutConfirm = false
+                viewModel.logout()
+                navController.navigate("login") {
+                    popUpTo(0) { inclusive = true }
+                }
+            },
+            title = "Keluar Akun?",
+            description = "Apakah Anda yakin ingin keluar dari aplikasi Rumah Sehat Manna wa Salwa?",
+            confirmText = "Ya, Keluar",
+            dismissText = "Batal",
+            isDanger = true
+        )
     }
 }
 
@@ -215,21 +229,19 @@ fun ProfileMenuItem(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
-            .padding(horizontal = 24.dp)
+            .padding(horizontal = 8.dp)
             .heightIn(min = 64.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Left Icon
         Icon(
             imageVector = icon,
             contentDescription = null,
             tint = iconColor,
             modifier = Modifier.size(24.dp)
         )
-        
+
         Spacer(modifier = Modifier.width(16.dp))
-        
-        // Title
+
         Text(
             text = title,
             style = MaterialTheme.typography.bodyLarge,
@@ -237,8 +249,7 @@ fun ProfileMenuItem(
             color = textColor,
             modifier = Modifier.weight(1f)
         )
-        
-        // End Widget (Switch or Chevron)
+
         if (endWidget != null) {
             endWidget()
         } else if (showChevron) {
@@ -249,10 +260,4 @@ fun ProfileMenuItem(
             )
         }
     }
-}
-
-@Preview(showBackground = true)
-@Composable
-fun ProfileScreenPreview() {
-    // Preview Only
 }

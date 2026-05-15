@@ -1,403 +1,207 @@
 package com.android.rumahsehatmannawasalwa
 
+import android.Manifest
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
+import android.os.Build
+import android.app.NotificationChannel
+import android.app.NotificationManager
 import android.os.Bundle
-import android.util.Log // Import untuk melihat log di Logcat
+import android.util.Log
+import android.widget.Toast
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
-import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.layout.Arrangement
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Button
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
 import androidx.compose.runtime.*
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
+import android.graphics.Rect
+import android.view.ViewTreeObserver
+import androidx.compose.ui.platform.LocalView
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.composable
+import androidx.localbroadcastmanager.content.LocalBroadcastManager
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.android.rumahsehatmannawasalwa.data.api.RetrofitClient
+import com.android.rumahsehatmannawasalwa.data.service.PusherService
+import com.android.rumahsehatmannawasalwa.ui.components.BottomNavigationBar
+import com.android.rumahsehatmannawasalwa.ui.navigation.AppNavGraph
+import com.android.rumahsehatmannawasalwa.ui.navigation.Screen
 import com.android.rumahsehatmannawasalwa.ui.theme.RumahsehatmannawasalwaTheme
-import androidx.navigation.NavType
-import androidx.navigation.navArgument
-import com.android.rumahsehatmannawasalwa.data.ApiResult
-// 1. Import Library Firebase
+import com.android.rumahsehatmannawasalwa.ui.viewmodel.ViewModelFactory
+import com.android.rumahsehatmannawasalwa.ui.viewmodel.auth.AuthViewModel
+import com.android.rumahsehatmannawasalwa.ui.viewmodel.booking.AdminBookingViewModel
+import com.android.rumahsehatmannawasalwa.ui.viewmodel.booking.BookingViewModel
+import com.android.rumahsehatmannawasalwa.ui.viewmodel.admin.AdminDashboardViewModel
+import com.android.rumahsehatmannawasalwa.ui.viewmodel.booking.AppointmentDetailViewModel
+import com.android.rumahsehatmannawasalwa.ui.viewmodel.medicalrecord.TherapyRecordViewModel
+import com.android.rumahsehatmannawasalwa.ui.viewmodel.notification.NotificationViewModel
+import com.android.rumahsehatmannawasalwa.ui.viewmodel.schedule.ScheduleViewModel
+import com.android.rumahsehatmannawasalwa.ui.viewmodel.service.ServiceViewModel
+import com.android.rumahsehatmannawasalwa.ui.viewmodel.user.AdminUserViewModel
+import com.android.rumahsehatmannawasalwa.ui.viewmodel.therapist.TherapistAppointmentViewModel
+import com.android.rumahsehatmannawasalwa.ui.viewmodel.therapist.TherapistDashboardViewModel
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.ktx.Firebase
-import com.android.rumahsehatmannawasalwa.ui.viewmodel.auth.AuthViewModel
-import com.android.rumahsehatmannawasalwa.ui.viewmodel.booking.BookingViewModel
-import com.android.rumahsehatmannawasalwa.ui.screens.auth.LoginScreen
-import com.android.rumahsehatmannawasalwa.ui.screens.auth.RegisterScreen
-import com.android.rumahsehatmannawasalwa.ui.screens.patient.home.HomeScreen
-import com.android.rumahsehatmannawasalwa.ui.screens.patient.booking.MyBookingScreen
-import com.android.rumahsehatmannawasalwa.ui.screens.patient.booking.BookingScreen
-import com.android.rumahsehatmannawasalwa.ui.screens.profile.ProfileScreen
-import com.android.rumahsehatmannawasalwa.ui.components.BottomNavigationBar
-import com.android.rumahsehatmannawasalwa.ui.screens.patient.booking.BookingSummaryData
-import com.android.rumahsehatmannawasalwa.ui.screens.patient.history.TherapyHistoryScreen
-import com.android.rumahsehatmannawasalwa.ui.viewmodel.medicalrecord.TherapyHistoryViewModel
-import java.time.format.DateTimeFormatter
-import java.util.Locale
+import com.google.firebase.messaging.FirebaseMessaging
+import dagger.hilt.android.AndroidEntryPoint
 
+@AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+
+    private val notificationReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            val title = intent?.getStringExtra("title")
+            val message = intent?.getStringExtra("message")
+            val bookingId = intent?.getStringExtra("booking_id")
+            showInAppNotification(title, message, bookingId)
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // Cek user login di awal
-        val currentUser = Firebase.auth.currentUser
-        // Jika sudah login, ke "dispatch" untuk cek role, jika belum ke "login"
-        val startDestination = if (currentUser != null) "dispatch" else "login"
+        LocalBroadcastManager.getInstance(this).registerReceiver(
+            notificationReceiver, IntentFilter("FCM_DATA_EVENT")
+        )
+
+        // Inisialisasi Pusher
+        try {
+            PusherService.connect()
+        } catch (e: Exception) {
+            Log.e("MainActivity", "Pusher Connect Error", e)
+        }
 
         setContent {
             RumahsehatmannawasalwaTheme {
-                val navController = rememberNavController()
-                val authViewModel: AuthViewModel = viewModel()
-                // Shared ViewModel for Booking Flow
-                val bookingViewModel: BookingViewModel = viewModel()
-
-                val adminUserViewModel: com.android.rumahsehatmannawasalwa.ui.viewmodel.user.AdminUserViewModel = viewModel()
-                // Inject LayananViewModel for Admin Manage Services
-                val layananViewModel: com.android.rumahsehatmannawasalwa.ui.viewmodel.service.LayananViewModel = viewModel()
-
-                NavHost(navController = navController, startDestination = startDestination) {
-
-                    // Halaman Login
-                    composable("login") {
-                        LoginScreen(navController, authViewModel)
-                    }
-
-                    // Halaman Register
-                    composable("register") {
-                        RegisterScreen(navController, authViewModel)
-                    }
-
-                    // Dispatch Screen (Routing)
-                    composable("dispatch") {
-                        com.android.rumahsehatmannawasalwa.ui.screens.DispatchScreen(navController, authViewModel)
-                    }
-
-                    // Halaman Home User (Pasien)
-                    composable("home") {
-                        HomeScreen(navController, authViewModel = authViewModel)
-                    }
-
-                    // Halaman Home Admin (Container)
-                    composable("admin_home") {
-                        com.android.rumahsehatmannawasalwa.ui.screens.admin.home.AdminMainScreen(
-                            onLogout = {
-                                authViewModel.logout()
-                                navController.navigate("login") {
-                                    popUpTo(0)
-                                }
-                            },
-                            adminUserViewModel = adminUserViewModel,
-                            layananViewModel = layananViewModel, 
-                            onUserClick = { userId ->
-                                navController.navigate("admin_user_detail/$userId")
-                            },
-                            onAddUserClick = {
-                                navController.navigate("admin_add_user")
-                            },
-                            onServiceClick = { serviceId ->
-                                navController.navigate("admin_service_detail/$serviceId")
-                            },
-                            onAddServiceClick = {
-                                navController.navigate("admin_add_service")
-                            },
-                            onTherapistClick = { therapistId ->
-                                navController.navigate("admin_therapist_schedule/$therapistId")
-                            },
-                            onAddBookingClick = {
-                                navController.navigate("create_booking")
-                            }
-                        )
-                    }
-
-                    composable(
-                        route = "admin_add_user"
-                    ) {
-                        com.android.rumahsehatmannawasalwa.ui.screens.admin.users.AdminAddUserScreen(
-                            navController = navController,
-                            viewModel = adminUserViewModel
-                        )
-                    }
-
-                    composable(
-                        route = "admin_user_detail/{userId}",
-                        arguments = listOf(navArgument("userId") { type = NavType.IntType })
-                    ) { backStackEntry ->
-                        val userId = backStackEntry.arguments?.getInt("userId") ?: 0
-                        com.android.rumahsehatmannawasalwa.ui.screens.admin.users.AdminUserDetailScreen(
-                            navController = navController,
-                            viewModel = adminUserViewModel,
-                            userId = userId
-                        )
-                    }
-
-                    composable(
-                        route = "admin_edit_user/{userId}",
-                        arguments = listOf(navArgument("userId") { type = NavType.IntType })
-                    ) { backStackEntry ->
-                        val userId = backStackEntry.arguments?.getInt("userId") ?: 0
-                        com.android.rumahsehatmannawasalwa.ui.screens.admin.users.AdminEditUserScreen(
-                            navController = navController,
-                            viewModel = adminUserViewModel,
-                            userId = userId
-                        )
-                    }
-
-                    // --- Service CRUD Routes ---
-                    composable("admin_add_service") {
-                        com.android.rumahsehatmannawasalwa.ui.screens.admin.services.AdminAddServiceScreen(
-                            navController = navController,
-                            viewModel = layananViewModel
-                        )
-                    }
-
-                    composable(
-                        route = "admin_service_detail/{serviceId}",
-                        arguments = listOf(navArgument("serviceId") { type = NavType.IntType })
-                    ) { backStackEntry ->
-                        val serviceId = backStackEntry.arguments?.getInt("serviceId") ?: 0
-                        com.android.rumahsehatmannawasalwa.ui.screens.admin.services.AdminServiceDetailScreen(
-                            navController = navController,
-                            viewModel = layananViewModel,
-                            serviceId = serviceId
-                        )
-                    }
-
-                    composable(
-                        route = "admin_edit_service/{serviceId}",
-                        arguments = listOf(navArgument("serviceId") { type = NavType.IntType })
-                    ) { backStackEntry ->
-                        val serviceId = backStackEntry.arguments?.getInt("serviceId") ?: 0
-                        com.android.rumahsehatmannawasalwa.ui.screens.admin.services.AdminAddServiceScreen(
-                            navController = navController,
-                            viewModel = layananViewModel,
-                            serviceId = serviceId
-                        )
-                    }
-                    
-                    // --- Schedule Management ---
-                    composable("admin_therapist_list") {
-                         com.android.rumahsehatmannawasalwa.ui.screens.admin.schedule.AdminTherapistListScreen(
-                             navController = navController,
-                             viewModel = adminUserViewModel, // Share existing vm for list
-                             onTherapistClick = { therapistId ->
-                                 navController.navigate("admin_therapist_schedule/$therapistId")
-                             }
-                         )
-                    }
-
-                    composable(
-                        route = "admin_therapist_schedule/{therapistId}",
-                        arguments = listOf(navArgument("therapistId") { type = NavType.IntType })
-                    ) { backStackEntry ->
-                        val therapistId = backStackEntry.arguments?.getInt("therapistId") ?: 0
-                        com.android.rumahsehatmannawasalwa.ui.screens.admin.schedule.AdminTherapistScheduleScreen(
-                            navController = navController,
-                            therapistId = therapistId
-                        )
-                    }
-
-                    // ... (Other routes remain same)
-                    
-                    composable("create_booking") {
-                        com.android.rumahsehatmannawasalwa.ui.screens.admin.bookings.AdminBookingCreateScreen(
-                            navController = navController,
-                            bookingViewModel = viewModel(),
-                            userViewModel = viewModel(), // Re-use viewModels if scoped properly, else new instance
-                            serviceViewModel = viewModel()
-                        )
-                    }
-
-                    composable("booking_history") {
-                        MyBookingScreen(navController, bookingViewModel)
-                    }
-
-                    composable("history") {
-                        TherapyHistoryScreen(navController = navController)
-                    }
-
-                    composable(
-                        route = "booking/{sId}/{sName}/{sPrice}",
-                        arguments = listOf(
-                            navArgument("sId") { type = NavType.StringType },
-                            navArgument("sName") { type = NavType.StringType },
-                            navArgument("sPrice") { type = NavType.IntType }
-                        )
-                    ) { backStackEntry ->
-                        val sId = backStackEntry.arguments?.getString("sId") ?: ""
-                        val sName = backStackEntry.arguments?.getString("sName") ?: ""
-                        val sPrice = backStackEntry.arguments?.getInt("sPrice") ?: 0
-
-                        BookingScreen(navController, sId, sName, sPrice, bookingViewModel)
-                    }
-
-                    composable("booking_summary") {
-                        // Gather data from ViewModel
-                        val serviceInfoState = bookingViewModel.selectedServiceInfo.collectAsState()
-                        val therapistState = bookingViewModel.selectedTherapist.collectAsState()
-                        val dateState = bookingViewModel.selectedDate.collectAsState()
-                        val timeState = bookingViewModel.selectedTimeSlot.collectAsState()
-                        val bookingStateState = bookingViewModel.bookingState.collectAsState()
-
-                        val serviceInfo = serviceInfoState.value
-                        val therapist = therapistState.value
-                        val date = dateState.value
-                        val time = timeState.value
-                        val bookingState = bookingStateState.value
-
-                        // Prepare Data
-                        if (serviceInfo != null && therapist != null && time != null) {
-                            val summaryData = BookingSummaryData(
-                                serviceName = serviceInfo.second,
-                                duration = "60 Menit", // Bisa diambil dari API kalau ada
-                                date = date.format(DateTimeFormatter.ofPattern("EEEE, d MMMM yyyy", Locale("id", "ID"))),
-                                time = time,
-                                therapistName = therapist.name,
-                                locationName = "Klinik Rumah Sehat",
-                                locationType = "Datang ke Klinik",
-                                servicePrice = serviceInfo.third,
-                                adminFee = 0 // Atau hitung logic lain
-                            )
-                            
-                            val context = androidx.compose.ui.platform.LocalContext.current
-                            LaunchedEffect(bookingState) {
-                                if (bookingState is ApiResult.Success) {
-                                    android.widget.Toast.makeText(context, "Booking Berhasil Dikirim!", android.widget.Toast.LENGTH_LONG).show()
-                                    bookingViewModel.resetState()
-                                    navController.navigate("booking_history") {
-                                        popUpTo("home")
-                                    }
-                                } else if (bookingState is ApiResult.Error) {
-                                    val err = (bookingState as ApiResult.Error).error
-                                    android.widget.Toast.makeText(context, err, android.widget.Toast.LENGTH_LONG).show()
-                                    // Reset state so we can try again
-                                    // bookingViewModel.resetState() // Don't reset everything, just error? Viewmodel handles specific reset inside buatPesanan logic potentially? No, logic is simple.
-                                }
-                            }
-
-                            com.android.rumahsehatmannawasalwa.ui.screens.patient.booking.BookingSummaryScreen(
-                                data = summaryData,
-                                onBackClick = { navController.popBackStack() },
-                                onConfirmClick = {
-                                    bookingViewModel.buatPesanan(
-                                        serviceId = serviceInfo!!.first,
-                                        serviceName = serviceInfo!!.second,
-                                        servicePrice = serviceInfo!!.third,
-                                        tanggal = date.format(java.time.format.DateTimeFormatter.ISO_LOCAL_DATE),
-                                        jam = time!!,
-                                        therapistId = therapist!!.id
-                                    )
-                                }
-                            )
-                        } else {
-                            // Fallback if data missing (should not happen in normal flow)
-                             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                                 Text("Data booking tidak lengkap. Silakan kembali.")
-                             }
-                        }
-                    }
-
-                    composable(
-                        route = "booking_detail/{bookingId}",
-                        arguments = listOf(navArgument("bookingId") { type = NavType.IntType })
-                    ) { backStackEntry ->
-                        val bookingId = backStackEntry.arguments?.getInt("bookingId") ?: 0
-                        com.android.rumahsehatmannawasalwa.ui.screens.patient.booking.BookingDetailScreen(
-                            navController = navController,
-                            bookingId = bookingId,
-                            viewModel = bookingViewModel
-                        )
-                    }
-
-                    // Halaman Profil (Menu Utama)
-                    composable("profile") {
-                        ProfileScreen(navController, authViewModel)
-                    }
-
-                    // Halaman Detail Profil (Edit/View Detail)
-                    composable("profile_detail") {
-                         com.android.rumahsehatmannawasalwa.ui.screens.profile.ProfileDetailScreen(
-                             navController = navController, 
-                             viewModel = authViewModel
-                         )
-                    }
-
-                    // Halaman Lengkapi Data (Complete Profile)
-                    composable("complete_profile") {
-                        val user by authViewModel.currentUserData.collectAsState()
-                        com.android.rumahsehatmannawasalwa.ui.screens.profile.CompleteProfileScreen(
-                            email = user?.email ?: "",
-                            onSaveClick = { profile ->
-                                authViewModel.updateUserProfile(
-                                    name = profile.name,
-                                    phone = profile.phoneNumber,
-                                    job = profile.job,
-                                    address = profile.address,
-                                    birthDate = profile.birthDate,
-                                    gender = profile.gender
-                                )
-                            }
-                        )
-                        
-                        // Observe Success/Error for Navigation
-                        val authState by authViewModel.authState.collectAsState()
-                        val context = androidx.compose.ui.platform.LocalContext.current
-                        LaunchedEffect(authState) {
-                             if (authState is com.android.rumahsehatmannawasalwa.data.ApiResult.Success) {
-                                  navController.navigate("home") {
-                                      popUpTo("complete_profile") { inclusive = true }
-                                      popUpTo("login") { inclusive = true } // Clean stack
-                                  }
-                                  authViewModel.resetState()
-                             } else if (authState is com.android.rumahsehatmannawasalwa.data.ApiResult.Error) {
-                                  val msg = (authState as com.android.rumahsehatmannawasalwa.data.ApiResult.Error).error
-                                  android.widget.Toast.makeText(context, msg, android.widget.Toast.LENGTH_LONG).show()
-                                  authViewModel.resetState()
-                             }
-                        }
-                    }
-
-                    // --- Rute Terapis ---
-                    composable("therapist_home") {
-                        com.android.rumahsehatmannawasalwa.ui.screens.therapist.home.TherapistHomeScreen(navController)
-                    }
-                    
-                    composable("therapist_appointment") {
-                        com.android.rumahsehatmannawasalwa.ui.screens.therapist.appointment.TherapistAppointmentScreen(navController)
-                    }
-                    
-                    composable("therapist_schedule") {
-                        com.android.rumahsehatmannawasalwa.ui.screens.therapist.schedule.TherapistScheduleScreen(navController)
-                    }
-                }
+                MainApp()
             }
         }
     }
-}
 
-@Composable
-fun Greeting(name: String, onLogout: () -> Unit) {
-    Column(
-        modifier = androidx.compose.ui.Modifier.fillMaxSize(),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Text(text = "Halo, $name!")
-        Spacer(modifier = androidx.compose.ui.Modifier.height(16.dp))
-        Button(onClick = onLogout) {
-            Text("Keluar (Logout)")
+    @Composable
+    private fun MainApp() {
+        val navController = rememberNavController()
+        val factory = ViewModelFactory.getInstance(application)
+
+        // ── 1. VIEWMODELS INITIALIZATION ───────────────────────────────────
+        val authViewModel: AuthViewModel = viewModel(factory = factory)
+        val notificationViewModel: NotificationViewModel = viewModel(factory = factory)
+        val adminUserViewModel: AdminUserViewModel = viewModel(factory = factory)
+        val serviceViewModel: ServiceViewModel = viewModel(factory = factory)
+        val bookingViewModel: BookingViewModel = viewModel(factory = factory)
+        val adminBookingViewModel: AdminBookingViewModel = viewModel(factory = factory)
+        val therapyRecordViewModel: TherapyRecordViewModel = viewModel(factory = factory)
+        val scheduleViewModel: ScheduleViewModel = viewModel()
+        val appointmentDetailViewModel: AppointmentDetailViewModel = viewModel(factory = factory)
+        val adminDashboardViewModel: AdminDashboardViewModel = viewModel(factory = factory)
+        val therapistDashboardViewModel: TherapistDashboardViewModel = viewModel(factory = factory)
+        val therapistAppointmentViewModel: TherapistAppointmentViewModel = viewModel(factory = factory)
+
+        // ── 2. APP STATE & NAVIGATION ──────────────────────────────────────
+        val userData by authViewModel.currentUserData.collectAsState()
+        val navBackStackEntry by navController.currentBackStackEntryAsState()
+        val currentRoute = navBackStackEntry?.destination?.route
+
+        // Permission Launcher (Android 13+)
+        val permissionLauncher = rememberLauncherForActivityResult(
+            ActivityResultContracts.RequestPermission()
+        ) { isGranted ->
+            if (!isGranted) Log.d("MainActivity", "Izin notifikasi ditolak user")
         }
+
+        LaunchedEffect(Unit) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+            }
+        }
+
+        // Realtime Updates (Badge)
+        LaunchedEffect(userData?.id) {
+            userData?.id?.let { if (it > 0) notificationViewModel.listenToRealtimeUpdates(it) }
+        }
+
+        // Keyboard Detection
+        val isKeyboardVisible by rememberKeyboardVisibility()
+
+        // ── 3. BOTTOM BAR LOGIC ────────────────────────────────────────────
+        val showBottomBar = remember(currentRoute, isKeyboardVisible) {
+            val mainRoutes = listOf(
+                Screen.PatientHome.route,
+                Screen.PatientAppointment.route,
+                Screen.Record.route,
+                Screen.PatientProfile.route,
+                Screen.AdminHome.route,
+                Screen.AdminAppointment.route,
+                Screen.AdminPatientList.route,
+                Screen.TherapistHome.route,
+                Screen.TherapistAppointment.route,
+                Screen.TherapistSchedule.route,
+                Screen.TherapistPatientList.route,
+                Screen.TherapistProfile.route
+            )
+            currentRoute in mainRoutes && !isKeyboardVisible
+        }
+
+        Scaffold(
+            bottomBar = {
+                if (showBottomBar) {
+                    BottomNavigationBar(
+                        navController = navController,
+                        role = userData?.role ?: "patient"
+                    )
+                }
+            }
+        ) { innerPadding ->
+            Box(modifier = Modifier.padding(top = innerPadding.calculateTopPadding())) {
+                AppNavGraph(
+                    navController = navController,
+                    authViewModel = authViewModel,
+                    bookingViewModel = bookingViewModel,
+                    adminUserViewModel = adminUserViewModel,
+                    serviceViewModel = serviceViewModel,
+                    therapyRecordViewModel = therapyRecordViewModel,
+                    therapistAppointmentViewModel = therapistAppointmentViewModel,
+                    scheduleViewModel = scheduleViewModel,
+                    adminDashboardViewModel = adminDashboardViewModel,
+                    adminBookingViewModel = adminBookingViewModel,
+                    appointmentDetailViewModel = appointmentDetailViewModel,
+                    notificationViewModel = notificationViewModel,
+                    therapistDashboardViewModel = therapistDashboardViewModel
+                )
+            }
+        }
+    }
+
+    @Composable
+    private fun rememberKeyboardVisibility(): State<Boolean> {
+        val keyboardState = remember { mutableStateOf(false) }
+        val view = LocalView.current
+        DisposableEffect(view) {
+            val onGlobalListener = ViewTreeObserver.OnGlobalLayoutListener {
+                val rect = Rect()
+                view.getWindowVisibleDisplayFrame(rect)
+                val screenHeight = view.rootView.height
+                val keypadHeight = screenHeight - rect.bottom
+                keyboardState.value = keypadHeight > screenHeight * 0.15
+            }
+            view.viewTreeObserver.addOnGlobalLayoutListener(onGlobalListener)
+            onDispose { view.viewTreeObserver.removeOnGlobalLayoutListener(onGlobalListener) }
+        }
+        return keyboardState
+    }
+
+    private fun showInAppNotification(title: String?, message: String?, bookingId: String?) {
+        // Toast dihapus agar tidak redundant dengan notifikasi sistem
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        LocalBroadcastManager.getInstance(this).unregisterReceiver(notificationReceiver)
     }
 }

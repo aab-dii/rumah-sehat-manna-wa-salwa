@@ -19,8 +19,14 @@ android {
         vectorDrawables {
             useSupportLibrary = true
         }
-        buildConfigField("String", "BASE_URL", "\"http://10.0.2.2:8000/api/\"")
-//        buildConfigField("String", "BASE_URL", "\"http://192.168.1.16:8000/api/\"")
+//        buildConfigField("String", "BASE_URL", "\"http://10.0.2.2:8000/api/\"")
+//        buildConfigField("String", "BASE_URL", "\"http://192.168.110.24:8000/api/\"")
+        buildConfigField("String", "BASE_URL", "\"http://192.168.1.6:8000/api/\"")
+        buildConfigField("String", "ADMIN_WHATSAPP", "\"6285220264022\"")
+//        buildConfigField("String", "BASE_URL", "\"http://192.168.110.195:8000/api/\"")
+//        buildConfigField("String", "BASE_URL", "\"http://10.99.171.192:8000/api/\"")
+//        buildConfigField("String", "BASE_URL", "\"http://10.10.202.138:8000/api/\"")
+//        buildConfigField("String", "BASE_URL", "\"http://10.233.25.192:8000/api/\"")
     }
 
     buildTypes {
@@ -55,6 +61,14 @@ android {
 
 dependencies {
 
+    implementation("androidx.compose.material3:material3:1.3.0")
+    // Pastikan juga compose foundation kamu update (opsional tapi disarankan)
+    implementation("androidx.compose.foundation:foundation:1.7.0")
+    //hilt
+    implementation("androidx.hilt:hilt-navigation-compose:1.2.0")
+
+    implementation("com.google.firebase:firebase-messaging-ktx")
+    implementation("com.pusher:pusher-java-client:2.4.2")
     implementation("androidx.compose.material:material-icons-extended:1.7.6")
     implementation("io.coil-kt:coil-compose:2.5.0")
     implementation("com.google.android.gms:play-services-auth:20.7.0")
@@ -62,6 +76,7 @@ dependencies {
     implementation("androidx.navigation:navigation-compose:2.7.7")
     // ViewModel untuk Logic
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.7.0")
+    implementation("androidx.compose.runtime:runtime-livedata:1.6.0")
 
     // Retrofit & Gson (Network)
     implementation("com.squareup.retrofit2:retrofit:2.9.0")

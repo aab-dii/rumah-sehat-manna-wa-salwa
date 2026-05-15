@@ -9,5 +9,6 @@ data class CheckoutRequest(
     @SerializedName("booking_time") val bookingTime: String,
     @SerializedName("location_type") val locationType: String,
     @SerializedName("address") val address: String,
-    @SerializedName("total_price") val totalPrice: Int
+    @SerializedName("total_price") val totalPrice: Int,
+    @SerializedName("payment_method") val paymentMethod: String = "later"
 )
