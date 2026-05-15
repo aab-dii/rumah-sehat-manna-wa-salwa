@@ -7,6 +7,7 @@ import com.android.rumahsehatmannawasalwa.data.model.schedule.AddHolidayRequest
 import com.android.rumahsehatmannawasalwa.data.model.schedule.EmergencyCloseRequest
 import com.android.rumahsehatmannawasalwa.data.model.schedule.Schedule
 import com.android.rumahsehatmannawasalwa.data.model.schedule.UpdateScheduleRequest
+import com.android.rumahsehatmannawasalwa.utils.ErrorUtils
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 
@@ -40,7 +41,7 @@ class TherapistRepository(
             if (response.isSuccessful && response.body()?.data != null) {
                 emit(ApiResult.Success(response.body()!!.data))
             } else {
-                emit(ApiResult.Error("Gagal mengambil jadwal"))
+                emit(ApiResult.Error(ErrorUtils.parseErrorMessage(response)))
             }
         } catch (e: Exception) {
              emit(ApiResult.Error(e.message ?: "Terjadi kesalahan"))
@@ -54,7 +55,7 @@ class TherapistRepository(
             if (response.isSuccessful && response.body()?.data != null) {
                 emit(ApiResult.Success(response.body()!!.data))
             } else {
-                emit(ApiResult.Error("Gagal update jadwal"))
+                emit(ApiResult.Error(ErrorUtils.parseErrorMessage(response)))
             }
         } catch (e: Exception) {
             emit(ApiResult.Error(e.message ?: "Terjadi kesalahan"))
@@ -73,8 +74,7 @@ class TherapistRepository(
             if (response.isSuccessful) {
                 emit(ApiResult.Success(response.body()?.meta?.message ?: "Berhasil menutup klinik"))
             } else {
-                val errorBody = response.errorBody()?.string()
-                emit(ApiResult.Error(errorBody ?: "Gagal menutup klinik"))
+                emit(ApiResult.Error(ErrorUtils.parseErrorMessage(response)))
             }
         } catch (e: Exception) {
             emit(ApiResult.Error(e.message ?: "Terjadi kesalahan"))
@@ -88,7 +88,7 @@ class TherapistRepository(
              if (response.isSuccessful) {
                  emit(ApiResult.Success(response.body()?.meta?.message ?: "Berhasil menambahkan hari libur"))
              } else {
-                 emit(ApiResult.Error("Gagal menambahkan hari libur"))
+                 emit(ApiResult.Error(ErrorUtils.parseErrorMessage(response)))
              }
          } catch (e: Exception) {
              emit(ApiResult.Error(e.message ?: "Terjadi kesalahan"))

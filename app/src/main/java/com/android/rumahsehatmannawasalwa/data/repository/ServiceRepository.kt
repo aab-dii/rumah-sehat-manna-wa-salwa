@@ -5,6 +5,7 @@ import android.net.Uri
 import com.android.rumahsehatmannawasalwa.data.ApiResult
 import com.android.rumahsehatmannawasalwa.data.api.ApiService
 import com.android.rumahsehatmannawasalwa.data.model.service.Service
+import com.android.rumahsehatmannawasalwa.utils.ErrorUtils
 import com.android.rumahsehatmannawasalwa.utils.FileUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -24,7 +25,7 @@ class ServiceRepository(private val apiService: ApiService) {
                 if (response.isSuccessful && response.body() != null) {
                     ApiResult.Success(response.body()!!.data.data)
                 } else {
-                    ApiResult.Error("Gagal memuat daftar layanan")
+                    ApiResult.Error(ErrorUtils.parseErrorMessage(response))
                 }
             } catch (e: Exception) {
                 ApiResult.Error("Error: ${e.message}")
@@ -41,7 +42,7 @@ class ServiceRepository(private val apiService: ApiService) {
                 if (response.isSuccessful && response.body() != null) {
                     ApiResult.Success(response.body()!!.data)
                 } else {
-                    ApiResult.Error("Gagal mengambil detail layanan")
+                    ApiResult.Error(ErrorUtils.parseErrorMessage(response))
                 }
             } catch (e: Exception) {
                 ApiResult.Error("Error: ${e.message}")
@@ -71,7 +72,7 @@ class ServiceRepository(private val apiService: ApiService) {
             if (response.isSuccessful && response.body() != null) {
                 ApiResult.Success(response.body()!!.data)
             } else {
-                ApiResult.Error("Gagal menambah layanan")
+                ApiResult.Error(ErrorUtils.parseErrorMessage(response))
             }
         } catch (e: Exception) {
             ApiResult.Error(e.message ?: "Unknown Error")
@@ -102,7 +103,7 @@ class ServiceRepository(private val apiService: ApiService) {
             if (response.isSuccessful && response.body() != null) {
                 ApiResult.Success(response.body()!!.data)
             } else {
-                ApiResult.Error("Gagal update layanan")
+                ApiResult.Error(ErrorUtils.parseErrorMessage(response))
             }
         } catch (e: Exception) {
             ApiResult.Error(e.message ?: "Unknown Error")
@@ -118,7 +119,7 @@ class ServiceRepository(private val apiService: ApiService) {
             if (response.isSuccessful) {
                 ApiResult.Success(Unit)
             } else {
-                ApiResult.Error("Gagal menghapus layanan")
+                ApiResult.Error(ErrorUtils.parseErrorMessage(response))
             }
         } catch (e: Exception) {
             ApiResult.Error(e.message ?: "Error")

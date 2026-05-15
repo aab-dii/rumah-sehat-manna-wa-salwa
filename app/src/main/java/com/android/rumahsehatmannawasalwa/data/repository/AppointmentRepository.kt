@@ -21,6 +21,7 @@ import com.android.rumahsehatmannawasalwa.data.repository.paging.AppointmentPagi
 import com.android.rumahsehatmannawasalwa.data.service.PusherService
 import com.android.rumahsehatmannawasalwa.utils.AppConstants
 import com.android.rumahsehatmannawasalwa.utils.FileUtils
+import com.android.rumahsehatmannawasalwa.utils.ErrorUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
@@ -132,8 +133,7 @@ class AppointmentRepository(
                 android.util.Log.d("BookingRepo", "✅ Sukses ID: $bookingId")
                 ApiResult.Success(bookingId)
             } else {
-                val errorBody = response.errorBody()?.string()
-                ApiResult.Error("Gagal: $errorBody")
+                ApiResult.Error(ErrorUtils.parseErrorMessage(response))
             }
         } catch (e: Exception) {
             ApiResult.Error("Error: ${e.message}")
@@ -147,7 +147,7 @@ class AppointmentRepository(
             if (response.isSuccessful) {
                 ApiResult.Success("Status berhasil diperbarui")
             } else {
-                ApiResult.Error("Gagal memperbarui status")
+                ApiResult.Error(ErrorUtils.parseErrorMessage(response))
             }
         } catch (e: Exception) {
             ApiResult.Error(e.message ?: "Terjadi kesalahan")
@@ -161,7 +161,7 @@ class AppointmentRepository(
             if (response.isSuccessful) {
                 ApiResult.Success(Unit)
             } else {
-                ApiResult.Error("Gagal membatalkan: ${response.message()}")
+                ApiResult.Error(ErrorUtils.parseErrorMessage(response))
             }
         } catch (e: Exception) {
             ApiResult.Error("Error: ${e.message}")
@@ -175,7 +175,7 @@ class AppointmentRepository(
                 if (response.isSuccessful) {
                     ApiResult.Success(Unit)
                 } else {
-                    ApiResult.Error("Gagal menolak pembayaran: ${response.message()}")
+                    ApiResult.Error(ErrorUtils.parseErrorMessage(response))
                 }
             } catch (e: Exception) {
                 ApiResult.Error("Error: ${e.message}")
@@ -188,7 +188,7 @@ class AppointmentRepository(
             if (response.isSuccessful) {
                 ApiResult.Success(Unit)
             } else {
-                ApiResult.Error("Gagal menerima pembayaran: ${response.message()}")
+                ApiResult.Error(ErrorUtils.parseErrorMessage(response))
             }
         } catch (e: Exception) {
             ApiResult.Error("Error: ${e.message}")
@@ -205,7 +205,7 @@ class AppointmentRepository(
                 if (response.isSuccessful) {
                     ApiResult.Success(Unit)
                 } else {
-                    ApiResult.Error("Gagal reupload: ${response.message()}")
+                    ApiResult.Error(ErrorUtils.parseErrorMessage(response))
                 }
             } catch (e: Exception) {
                 ApiResult.Error("Error: ${e.message}")
@@ -219,7 +219,7 @@ class AppointmentRepository(
                 if (response.isSuccessful) {
                     ApiResult.Success("Booking updated successfully")
                 } else {
-                    ApiResult.Error("Failed: ${response.message()}")
+                    ApiResult.Error(ErrorUtils.parseErrorMessage(response))
                 }
             } catch (e: Exception) {
                 ApiResult.Error("Error: ${e.message}")
@@ -238,7 +238,7 @@ class AppointmentRepository(
                 val availableSlots = response.body()!!.data
                 ApiResult.Success(availableSlots)
             } else {
-                ApiResult.Error("Gagal memuat slot")
+                ApiResult.Error(ErrorUtils.parseErrorMessage(response))
             }
         } catch (e: Exception) {
             ApiResult.Error(e.localizedMessage ?: "Terjadi kesalahan")
@@ -265,7 +265,7 @@ class AppointmentRepository(
                 }
                 emit(ApiResult.Success(filtered))
             } else {
-                emit(ApiResult.Error("Gagal memuat daftar terapis"))
+                emit(ApiResult.Error(ErrorUtils.parseErrorMessage(response)))
             }
         } catch (e: Exception) {
             emit(ApiResult.Error("Error: ${e.message}"))
@@ -282,7 +282,7 @@ class AppointmentRepository(
                     ScheduleMapper.mapResponseToProcessedSchedule(response.body()!!.data)
                 ApiResult.Success(processedData)
             } else {
-                ApiResult.Error("Gagal mengambil jadwal terapis")
+                ApiResult.Error(ErrorUtils.parseErrorMessage(response))
             }
         } catch (e: Exception) {
             ApiResult.Error(e.localizedMessage ?: "Terjadi kesalahan jaringan")
@@ -300,7 +300,7 @@ class AppointmentRepository(
             if (response.isSuccessful && response.body() != null) {
                 ApiResult.Success(response.body()!!.data)
             } else {
-                ApiResult.Error("Gagal cek ketersediaan")
+                ApiResult.Error(ErrorUtils.parseErrorMessage(response))
             }
         } catch (e: Exception) {
             ApiResult.Error(e.localizedMessage ?: "Terjadi kesalahan jaringan")
@@ -340,7 +340,7 @@ class AppointmentRepository(
             if (response.isSuccessful && response.body() != null) {
                 ApiResult.Success(response.body()!!.data)
             } else {
-                ApiResult.Error("Gagal memuat detail layanan")
+                ApiResult.Error(ErrorUtils.parseErrorMessage(response))
             }
         } catch (e: Exception) {
             ApiResult.Error(e.message ?: "Terjadi kesalahan")

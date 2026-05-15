@@ -12,6 +12,7 @@ import com.android.rumahsehatmannawasalwa.data.model.auth.User
 import com.android.rumahsehatmannawasalwa.data.model.service.Service
 import com.android.rumahsehatmannawasalwa.data.repository.paging.UserPagingSource
 import com.android.rumahsehatmannawasalwa.utils.FileUtils
+import com.android.rumahsehatmannawasalwa.utils.ErrorUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
@@ -61,7 +62,7 @@ class UserRepository(
             if (response.isSuccessful && response.body() != null) {
                 emit(ApiResult.Success(response.body()!!.data))
             } else {
-                emit(ApiResult.Error(response.message()))
+                emit(ApiResult.Error(ErrorUtils.parseErrorMessage(response)))
             }
         } catch (e: Exception) {
             emit(ApiResult.Error(e.message ?: "Terjadi kesalahan jaringan"))
@@ -78,7 +79,7 @@ class UserRepository(
             if (response.isSuccessful && response.body() != null) {
                 emit(ApiResult.Success(response.body()!!.data.data))
             } else {
-                emit(ApiResult.Error(response.message()))
+                emit(ApiResult.Error(ErrorUtils.parseErrorMessage(response)))
             }
         } catch (e: Exception) {
             emit(ApiResult.Error(e.message ?: "Gagal mengambil daftar user"))
@@ -94,7 +95,7 @@ class UserRepository(
             if (response.isSuccessful) {
                 ApiResult.Success(Unit)
             } else {
-                ApiResult.Error(response.message())
+                ApiResult.Error(ErrorUtils.parseErrorMessage(response))
             }
         } catch (e: Exception) {
             ApiResult.Error(e.message ?: "Gagal menyimpan user ke database")
@@ -116,7 +117,7 @@ class UserRepository(
             if (response.isSuccessful) {
                 ApiResult.Success(Unit)
             } else {
-                ApiResult.Error(response.message())
+                ApiResult.Error(ErrorUtils.parseErrorMessage(response))
             }
         } catch (e: Exception) {
             ApiResult.Error(e.message ?: "Gagal memperbarui data user")
@@ -132,7 +133,7 @@ class UserRepository(
             if (response.isSuccessful) {
                 ApiResult.Success(Unit)
             } else {
-                ApiResult.Error(response.message())
+                ApiResult.Error(ErrorUtils.parseErrorMessage(response))
             }
         } catch (e: Exception) {
             ApiResult.Error(e.message ?: "Gagal menghapus user")
@@ -148,7 +149,7 @@ class UserRepository(
             if (response.isSuccessful && response.body() != null) {
                 emit(ApiResult.Success(response.body()!!.data.data))
             } else {
-                emit(ApiResult.Error("Gagal memuat layanan"))
+                emit(ApiResult.Error(ErrorUtils.parseErrorMessage(response)))
             }
         } catch (e: Exception) {
             emit(ApiResult.Error(e.message ?: "Terjadi kesalahan"))
@@ -161,7 +162,7 @@ class UserRepository(
             if (response.isSuccessful) {
                 ApiResult.Success(Unit)
             } else {
-                ApiResult.Error(response.message())
+                ApiResult.Error(ErrorUtils.parseErrorMessage(response))
             }
         } catch (e: Exception) {
             ApiResult.Error(e.message ?: "Gagal mengembalikan user")
