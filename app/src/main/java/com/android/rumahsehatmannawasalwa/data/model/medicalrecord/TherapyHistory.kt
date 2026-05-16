@@ -19,6 +19,7 @@ data class TherapyBookingRef(
     @SerializedName("id") val id: Int? = null,
     @SerializedName("booking_date") val bookingDate: String? = null,
     @SerializedName("booking_time") val bookingTime: String? = null,
+    @SerializedName("status") val status: String? = null,
     @SerializedName("service") val service: TherapyServiceRef?
 )
 

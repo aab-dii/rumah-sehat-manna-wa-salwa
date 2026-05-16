@@ -70,7 +70,8 @@ object BookingMapper {
             patient = d.patient,
             therapist = d.therapist,
             service = d.service,
-            transaction = t
+            transaction = t,
+            isExpiredWarning = b.isExpiredWarning
         )
     }
 

@@ -7,6 +7,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.background
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -44,82 +47,138 @@ fun TherapyRecordDetailScreen(
         viewModel.getTherapyRecordDetail(recordId)
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(
-                Brush.verticalGradient(
-                    colorStops = arrayOf(
-                        0.0f to GreenDark,
-                        0.25f to GreenLight,
-                        1.0f to GreenLight
-                    )
-                )
-            )
-    ) {
-        // FIXED TOP BAR
-        Box(modifier = Modifier.statusBarsPadding()) {
-            TopBar(
-                title = "Catatan Terapi",
-                onBackClick = { navController.popBackStack() },
-                transparentBackground = true,
-                hideBackground = true
-            )
+    Scaffold(
+        floatingActionButton = {
+            if (detailResult is ApiResult.Success) {
+                val record = (detailResult as ApiResult.Success).data
+                // Cek apakah catatan sudah dikunci (Status Completed)
+                val isLocked = record.booking?.status == "completed"
+                
+                if (!isLocked) {
+                    FloatingActionButton(
+                        onClick = {
+                            navController.navigate("therapy_record_form/${record.booking?.id}?record_id=${record.id}")
+                        },
+                        containerColor = GreenPrimary,
+                        contentColor = Color.White,
+                        shape = CircleShape
+                    ) {
+                        Icon(
+                            imageVector = androidx.compose.material.icons.Icons.Default.Edit,
+                            contentDescription = "Edit Catatan"
+                        )
+                    }
+                }
+            }
         }
-
+    ) { padding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .verticalScroll(scrollState)
+                .padding(padding)
+                .background(
+                    Brush.verticalGradient(
+                        colorStops = arrayOf(
+                            0.0f to GreenDark,
+                            0.25f to GreenLight,
+                            1.0f to GreenLight
+                        )
+                    )
+                )
         ) {
+            // FIXED TOP BAR
+            Box(modifier = Modifier.statusBarsPadding()) {
+                TopBar(
+                    title = "Catatan Terapi",
+                    onBackClick = { navController.popBackStack() },
+                    transparentBackground = true,
+                    hideBackground = true
+                )
+            }
 
-            Spacer(modifier = Modifier.height(25.dp))
-            MannaSheet() {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 20.dp)
-                ) {
-                    when (val result = detailResult) {
-                        is ApiResult.Loading -> {
-                            Box(
-                                modifier = Modifier.fillMaxWidth().height(screenHeight),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                CircularProgressIndicator(color = GreenPrimary)
-                            }
-                        }
-                        is ApiResult.Success -> {
-                            RecordDetailContent(record = result.data)
-                        }
-                        is ApiResult.Error -> {
-                            Column(
-                                modifier = Modifier.fillMaxWidth().padding(32.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                Text("😕", fontSize = 40.sp)
-                                Text(
-                                    "Gagal memuat data",
-                                    fontWeight = FontWeight.Bold,
-                                    color = SlateText
-                                )
-                                Text(
-                                    text = result.error,
-                                    color = Color.Gray,
-                                    fontSize = 13.sp,
-                                    textAlign = TextAlign.Center)
-                                Button(
-                                    onClick = { viewModel.getTherapyRecordDetail(recordId) },
-                                    colors = ButtonDefaults.buttonColors(containerColor = GreenPrimary)
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(scrollState)
+            ) {
+
+                Spacer(modifier = Modifier.height(25.dp))
+                MannaSheet() {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 20.dp)
+                    ) {
+                        when (val result = detailResult) {
+                            is ApiResult.Loading -> {
+                                Box(
+                                    modifier = Modifier.fillMaxWidth().height(screenHeight),
+                                    contentAlignment = Alignment.Center
                                 ) {
-                                    Text(
-                                        text = "Coba Lagi",
-                                        color = Color.White)
+                                    CircularProgressIndicator(color = GreenPrimary)
                                 }
                             }
+                            is ApiResult.Success -> {
+                                val record = result.data
+                                // Tampilkan Banner Kunci jika sudah completed
+                                if (record.booking?.status == "completed") {
+                                    Surface(
+                                        modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 10.dp),
+                                        color = Color(0xFFFFF4F4),
+                                        shape = RoundedCornerShape(12.dp),
+                                        border = BorderStroke(1.dp, Color(0xFFFFCCCC))
+                                    ) {
+                                        Row(
+                                            modifier = Modifier.padding(12.dp),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Icon(
+                                                imageVector = androidx.compose.material.icons.Icons.Default.Lock,
+                                                contentDescription = null,
+                                                tint = Color(0xFFCC0000),
+                                                modifier = Modifier.size(20.dp)
+                                            )
+                                            Spacer(Modifier.width(8.dp))
+                                            Text(
+                                                "Catatan Terapi Terkunci (Sesi Selesai)",
+                                                color = Color(0xFFCC0000),
+                                                fontSize = 13.sp,
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                        }
+                                    }
+                                }
+                                RecordDetailContent(record = record)
+                            }
+                            is ApiResult.Error -> {
+                                Column(
+                                    modifier = Modifier.fillMaxWidth().padding(32.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Text("😕", fontSize = 40.sp)
+                                    Text(
+                                        "Gagal memuat data",
+                                        fontWeight = FontWeight.Bold,
+                                        color = SlateText
+                                    )
+                                    Text(
+                                        text = result.error,
+                                        color = Color.Gray,
+                                        fontSize = 13.sp,
+                                        textAlign = TextAlign.Center)
+                                    Button(
+                                        onClick = { viewModel.getTherapyRecordDetail(recordId) },
+                                        colors = ButtonDefaults.buttonColors(containerColor = GreenPrimary)
+                                    ) {
+                                        Text(
+                                            text = "Coba Lagi",
+                                            color = Color.White)
+                                    }
+                                }
+                            }
+                            else -> {}
                         }
-                        else -> {}
                     }
                 }
             }

@@ -15,5 +15,6 @@ data class BookingUiModel(
     val patient: User?,
     val therapist: User?,
     val service: Service?,
-    val transaction: ApiTransaction?
+    val transaction: ApiTransaction?,
+    val isExpiredWarning: Boolean = false
 )

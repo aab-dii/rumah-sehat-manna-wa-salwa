@@ -133,6 +133,30 @@ class TherapyRecordViewModel(
         }
     }
 
+    fun updateTherapyRecord(
+        recordId: Int,
+        bookingId: Int,
+        patientId: Int,
+        complaint: String,
+        action: String,
+        notes: String
+    ) {
+        viewModelScope.launch {
+            val request = TherapyRecordRequest(
+                bookingId = bookingId,
+                patientId = patientId,
+                patientComplaint = complaint,
+                therapistAction = action,
+                additionalNotes = notes
+            )
+            _isLoading.value = true
+            repository.updateTherapyRecord(recordId, request).collect { result ->
+                _saveResult.value = result
+                _isLoading.value = result is ApiResult.Loading
+            }
+        }
+    }
+
     private fun updateStatusToCompleted(bookingId: Int) {
         viewModelScope.launch {
             // Gunakan AppointmentRepository sebagai single source of truth untuk status booking

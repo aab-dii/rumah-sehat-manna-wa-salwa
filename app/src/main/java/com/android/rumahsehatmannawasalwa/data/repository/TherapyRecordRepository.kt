@@ -47,6 +47,30 @@ class TherapyRecordRepository(
             emit(ApiResult.Error("Koneksi gagal: ${e.localizedMessage}"))
         }
     }.flowOn(Dispatchers.IO)
+    
+    fun updateTherapyRecord(recordId: Int, request: TherapyRecordRequest): Flow<ApiResult<TherapyHistory>> = flow {
+        emit(ApiResult.Loading)
+        try {
+            val response = apiService.updateTherapyRecord(recordId, request)
+            if (response.isSuccessful) {
+                val body = response.body()
+                if (body?.data != null) {
+                    emit(ApiResult.Success(body.data))
+                } else {
+                    emit(ApiResult.Error("Respons data kosong dari server"))
+                }
+            } else {
+                val errorJson = response.errorBody()?.string()
+                val message = errorJson?.let {
+                    JSONObject(it).optString("message", "Gagal memperbarui rekam medis")
+                } ?: "Terjadi kesalahan server (${response.code()})"
+
+                emit(ApiResult.Error(message))
+            }
+        } catch (e: Exception) {
+            emit(ApiResult.Error("Koneksi gagal: ${e.localizedMessage}"))
+        }
+    }.flowOn(Dispatchers.IO)
 
     fun getTherapyRecords(patientId: Int? = null, searchQuery: String? = null, dateFrom: String? = null, dateTo: String? = null): Flow<PagingData<TherapyHistorySummary>> {
         return Pager(

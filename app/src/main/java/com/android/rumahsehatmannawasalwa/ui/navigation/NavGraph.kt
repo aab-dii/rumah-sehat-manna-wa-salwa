@@ -206,10 +206,16 @@ fun AppNavGraph(
             arguments = Screen.TherapyRecordForm.arguments
         ) { backStackEntry ->
             val bId = backStackEntry.arguments?.getInt("bookingId") ?: 0
+            val rId = backStackEntry.arguments?.getInt("recordId") ?: 0
             val vm: TherapyRecordViewModel = viewModel(
                 factory = ViewModelFactory.getInstance(context.applicationContext as Application)
             )
-            TherapyRecordFormScreen(bookingId = bId, viewModel = vm, navController = navController)
+            TherapyRecordFormScreen(
+                bookingId = bId, 
+                recordId = if (rId != 0) rId else null, 
+                viewModel = vm, 
+                navController = navController
+            )
         }
 
         composable(

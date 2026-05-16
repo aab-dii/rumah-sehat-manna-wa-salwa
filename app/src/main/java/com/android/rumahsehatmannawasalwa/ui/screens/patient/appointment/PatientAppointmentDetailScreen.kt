@@ -392,15 +392,36 @@ fun StatusSpecificContent(
                         Text("Sisa Waktu Pembayaran", fontSize = 12.sp, color = PaymentWarning)
                         Text(timerText, fontSize = 24.sp, fontWeight = FontWeight.Bold, color = PaymentWarning)
                     }
-                }
-                Spacer(Modifier.height(12.dp))
-                BankAccountInfo(context)
-                Spacer(Modifier.height(16.dp))
-                if (selectedProofUri != null) {
-                    ProofPreviewSection(selectedProofUri, onClearProof, onUploadClick, onConfirmUpload)
+                    
+                    Spacer(Modifier.height(12.dp))
+                    BankAccountInfo(context)
+                    Spacer(Modifier.height(16.dp))
+                    
+                    if (selectedProofUri != null) {
+                        ProofPreviewSection(selectedProofUri, onClearProof, onUploadClick, onConfirmUpload)
+                    } else {
+                        Button(onClick = onUploadClick, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = GreenPrimary)) {
+                            Icon(Icons.Default.Upload, null); Spacer(Modifier.width(8.dp)); Text("Upload Bukti Transfer")
+                        }
+                    }
                 } else {
-                    Button(onClick = onUploadClick, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = GreenPrimary)) {
-                        Icon(Icons.Default.Upload, null); Spacer(Modifier.width(8.dp)); Text("Upload Bukti Transfer")
+                    // Tampilan Expired
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(Color(0xFFFFF4F4), RoundedCornerShape(8.dp))
+                            .padding(16.dp)
+                    ) {
+                        Icon(Icons.Default.Warning, null, tint = RedDanger, modifier = Modifier.size(32.dp))
+                        Spacer(Modifier.height(8.dp))
+                        Text("Batas Waktu Habis", fontWeight = FontWeight.Bold, color = RedDanger)
+                        Text(
+                            "Booking ini telah kedaluwarsa karena melewati batas waktu pembayaran.",
+                            fontSize = 12.sp,
+                            color = Color.Gray,
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                        )
                     }
                 }
             }
@@ -414,6 +435,30 @@ fun StatusSpecificContent(
                 } else {
                     Button(onClick = onUploadClick, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = GreenPrimary)) {
                         Text("Upload Ulang Bukti")
+                    }
+                }
+            }
+        }
+        "canceled", "cancelled" -> {
+            PaymentStatusCard(title = "Dibatalkan", color = RedDanger, icon = Icons.Default.Warning) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        "Janji temu ini telah dibatalkan.",
+                        color = RedDanger,
+                        fontWeight = FontWeight.Bold,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                    )
+                    if (data.isExpiredWarning) {
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            "Waktu tunggu pembayaran telah habis.",
+                            fontSize = 12.sp,
+                            color = Color.Gray,
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                        )
                     }
                 }
             }

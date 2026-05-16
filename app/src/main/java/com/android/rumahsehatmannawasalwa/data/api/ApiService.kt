@@ -207,6 +207,12 @@ interface ApiService {
     @POST("therapy-records")
     suspend fun createTherapyRecord(@Body request: TherapyRecordRequest): Response<TherapyRecordDetailResponse>
 
+    @POST("therapy-records/{id}")
+    suspend fun updateTherapyRecord(
+        @Path("id") id: Int,
+        @Body request: TherapyRecordRequest
+    ): Response<TherapyRecordDetailResponse>
+
     @GET("admin/dashboard")
     suspend fun getAdminDashboard(
         @Query("timezone") timezone: String = java.util.TimeZone.getDefault().id

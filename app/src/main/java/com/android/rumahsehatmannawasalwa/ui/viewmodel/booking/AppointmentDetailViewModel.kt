@@ -30,7 +30,11 @@ class AppointmentDetailViewModel(private val repository: AppointmentRepository) 
     private val _actionMessage = MutableStateFlow<String?>(null)
     val actionMessage = _actionMessage.asStateFlow()
 
-    // Job untuk real-time subscription agar bisa di-cancel saat unsubscribe
+    private val _remainingSeconds = MutableStateFlow<Long?>(null)
+    val remainingSeconds = _remainingSeconds.asStateFlow()
+
+    // Job untuk countdown & real-time subscription
+    private var countdownJob: Job? = null
     private var realtimeJob: Job? = null
 
     fun resetUpdateState() {
@@ -49,9 +53,38 @@ class AppointmentDetailViewModel(private val repository: AppointmentRepository) 
                     is ApiResult.Success -> {
                         val role = repository.getUserRole()
                         val mapped = BookingMapper.mapToUiModel(result.data, role)
+                        
                         _detailState.value = ApiResult.Success(mapped)
+                        startCountdown(mapped.appointment?.paymentRemainingSeconds ?: 0L)
                     }
                     is ApiResult.Error -> _detailState.value = ApiResult.Error(result.error)
+                }
+            }
+        }
+    }
+
+    private fun startCountdown(initialSeconds: Long) {
+        countdownJob?.cancel()
+        _remainingSeconds.value = initialSeconds
+        countdownJob = viewModelScope.launch {
+            while (_remainingSeconds.value != null && _remainingSeconds.value!! > 0) {
+                kotlinx.coroutines.delay(1000)
+                _remainingSeconds.value = _remainingSeconds.value!! - 1
+            }
+            if (_remainingSeconds.value == 0L) {
+                // Ketika waktu habis di UI, otomatis ubah status menjadi canceled secara visual
+                val current = _detailState.value
+                if (current is ApiResult.Success) {
+                    val updatedAppointment = current.data.appointment?.copy(
+                        status = "canceled"
+                    )
+                    val updated = current.data.copy(
+                        isExpiredWarning = true,
+                        appointment = updatedAppointment,
+                        statusLabel = "Dibatalkan",
+                        statusColor = androidx.compose.ui.graphics.Color(0xFFC62828) // RedDanger
+                    )
+                    _detailState.value = ApiResult.Success(updated)
                 }
             }
         }
@@ -164,5 +197,6 @@ class AppointmentDetailViewModel(private val repository: AppointmentRepository) 
     override fun onCleared() {
         super.onCleared()
         realtimeJob?.cancel()
+        countdownJob?.cancel()
     }
 }

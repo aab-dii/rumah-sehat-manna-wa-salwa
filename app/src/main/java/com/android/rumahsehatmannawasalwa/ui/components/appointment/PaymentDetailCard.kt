@@ -37,6 +37,8 @@ fun PaymentDetailCard(data: BookingUiModel, viewModel: AppointmentDetailViewMode
     val totalPrice = data.transaction?.amount ?: (basePrice + AppConstants.ADMIN_FEE_PREVIEW)
     val adminFee   = totalPrice - basePrice
 
+    val remainingSeconds by viewModel.remainingSeconds.collectAsState()
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = Color.White),
@@ -47,6 +49,31 @@ fun PaymentDetailCard(data: BookingUiModel, viewModel: AppointmentDetailViewMode
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
+            // Countdown untuk Admin
+            if (data.appointment?.status?.lowercase() == "waiting_payment" && remainingSeconds != null) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(Color(0xFFFFF9C4), RoundedCornerShape(8.dp))
+                        .padding(12.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = if (remainingSeconds!! > 0) "Sisa Waktu Pasien Bayar" else "Waktu Pembayaran Habis",
+                        fontSize = 12.sp,
+                        color = Color(0xFFF57F17),
+                        fontWeight = FontWeight.Medium
+                    )
+                    Text(
+                        text = FormatterUtils.formatTimer(remainingSeconds!!),
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = if (remainingSeconds!! > 0) Color(0xFFF57F17) else RedDanger
+                    )
+                }
+                HorizontalDivider(color = DividerLight, thickness = 1.dp)
+            }
+
             // Rincian biaya
             PriceDetailRow("Harga Layanan", basePrice)
             PriceDetailRow("Biaya Admin", adminFee)

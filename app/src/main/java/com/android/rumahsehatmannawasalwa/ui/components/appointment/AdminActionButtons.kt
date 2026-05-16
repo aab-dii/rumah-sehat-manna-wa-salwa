@@ -1,10 +1,18 @@
 package com.android.rumahsehatmannawasalwa.ui.components.appointment
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.android.rumahsehatmannawasalwa.data.model.booking.BookingUiModel
 import com.android.rumahsehatmannawasalwa.ui.components.buttons.MannaButton
 import com.android.rumahsehatmannawasalwa.ui.components.buttons.MannaOutlinedButton
@@ -65,6 +73,35 @@ fun AdminActionButtons(
         verticalArrangement = Arrangement.spacedBy(12.dp),
         modifier = Modifier.padding(vertical = 16.dp)
     ) {
+        if (data.isExpiredWarning) {
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                color = Color(0xFFFFF9C4),
+                shape = RoundedCornerShape(12.dp),
+                border = BorderStroke(1.dp, Color(0xFFFBC02D))
+            ) {
+                Row(
+                    modifier = Modifier.padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Warning,
+                        contentDescription = null,
+                        tint = Color(0xFFF57F17),
+                        modifier = Modifier.size(24.dp)
+                    )
+                    Spacer(Modifier.width(12.dp))
+                    Text(
+                        text = "Peringatan: Waktu tunggu booking ini telah melewati batas. Konfirmasi ulang dengan pasien sebelum verifikasi.",
+                        color = Color(0xFF424242),
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Medium,
+                        lineHeight = 18.sp
+                    )
+                }
+            }
+        }
+
         val bStatus = data.appointment.status.lowercase()
 
         when (bStatus) {
@@ -72,6 +109,7 @@ fun AdminActionButtons(
                 MannaButton(
                     text    = "Konfirmasi Janji Temu",
                     containerColor = GreenPrimary,
+                    enabled = !data.isExpiredWarning,
                     onClick = {
                         confirmTitle  = "Konfirmasi Janji Temu?"
                         confirmMessage = "Tindakan ini akan memberitahu pasien bahwa jadwal mereka telah disetujui."
@@ -88,6 +126,7 @@ fun AdminActionButtons(
                 MannaButton(
                     text    = "Terima Pembayaran",
                     containerColor = GreenPrimary,
+                    enabled = !data.isExpiredWarning,
                     onClick = {
                         confirmTitle   = "Terima Pembayaran?"
                         confirmMessage = "Pastikan Anda sudah mengecek mutasi atau bukti transfer yang diunggah pasien."
@@ -104,6 +143,7 @@ fun AdminActionButtons(
                 MannaButton(
                     text    = "Selesaikan (Force-Complete)",
                     containerColor = Color(0xFF0288D1),
+                    enabled = !data.isExpiredWarning,
                     onClick = {
                         confirmTitle   = "Selesaikan Sesi?"
                         confirmMessage = "Janji temu ini akan diselesaikan tanpa catatan terapi. Terapis masih perlu mengisi catatan setelah ini. Lanjutkan?"
@@ -117,12 +157,14 @@ fun AdminActionButtons(
             }
         }
 
-        // Tombol Batalkan selalu ada di bawah
-        MannaOutlinedButton(
-            text    = "Batalkan Janji Temu",
-            borderColor = RedDanger,
-            contentColor = RedDanger,
-            onClick  = { showCancelDialog = true }
-        )
+        // Tombol Batalkan tidak muncul jika sudah selesai atau dibatalkan
+        if (bStatus !in listOf("canceled", "cancelled", "completed", "selesai")) {
+            MannaOutlinedButton(
+                text    = "Batalkan Janji Temu",
+                borderColor = RedDanger,
+                contentColor = RedDanger,
+                onClick  = { showCancelDialog = true }
+            )
+        }
     }
 }

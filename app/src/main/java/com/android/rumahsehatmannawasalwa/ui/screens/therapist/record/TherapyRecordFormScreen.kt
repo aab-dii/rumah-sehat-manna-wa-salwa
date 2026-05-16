@@ -41,6 +41,7 @@ import com.android.rumahsehatmannawasalwa.utils.FormatterUtils.formatDateHuman
 @Composable
 fun TherapyRecordFormScreen(
     bookingId: Int,
+    recordId: Int? = null, // Parameter baru untuk mode Edit
     viewModel: TherapyRecordViewModel,
     navController: NavController
 ) {
@@ -51,13 +52,28 @@ fun TherapyRecordFormScreen(
     val saveResult by viewModel.saveResult.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val bookingDetailResult by viewModel.bookingDetail.collectAsState()
+    val detailResult by viewModel.detailResult.collectAsState() // Untuk load data lama saat edit
     
     val context = LocalContext.current
     val scrollState = rememberScrollState()
     val screenHeight = androidx.compose.ui.platform.LocalConfiguration.current.screenHeightDp.dp
 
-    LaunchedEffect(bookingId) {
+    // 1. Fetch data awal
+    LaunchedEffect(bookingId, recordId) {
         viewModel.fetchBookingDetail(bookingId)
+        if (recordId != null) {
+            viewModel.getTherapyRecordDetail(recordId)
+        }
+    }
+
+    // 2. Populasi data jika masuk mode Edit
+    LaunchedEffect(detailResult) {
+        if (recordId != null && detailResult is ApiResult.Success) {
+            val record = (detailResult as ApiResult.Success).data
+            complaint = record.patientComplaint
+            action = record.therapistAction
+            notes = record.additionalNotes ?: ""
+        }
     }
 
     LaunchedEffect(saveResult) {
@@ -95,7 +111,7 @@ fun TherapyRecordFormScreen(
             // FIXED TOP BAR
             Box(modifier = Modifier.statusBarsPadding()) {
                 TopBar(
-                    title = "Isi Catatan Terapi",
+                    title = if (recordId == null) "Isi Catatan Terapi" else "Edit Catatan Terapi",
                     onBackClick = { navController.popBackStack() },
                     transparentBackground = true,
                     hideBackground = true
@@ -131,6 +147,7 @@ fun TherapyRecordFormScreen(
                                 val service = data.service
                                 val patient = data.patient
                                 val therapist = data.therapist
+                                val isLocked = appointment.status == "completed"
 
                                 // ── 1. INFORMASI SESI ───────────────────
                                 Column {
@@ -196,36 +213,65 @@ fun TherapyRecordFormScreen(
                                 // ── 3. INPUT KELUHAN PASIEN ──────────────────────
                                 Column {
                                     SectionTitle("Keluhan Pasien *")
-                                    InputArea(value = complaint, onValueChange = { complaint = it }, height = 120.dp, placeholder = "Tuliskan keluhan pasien...")
+                                    InputArea(value = complaint, onValueChange = { complaint = it }, height = 120.dp, placeholder = "Tuliskan keluhan pasien...", enabled = !isLocked)
                                 }
 
                                 // ── 4. INPUT TINDAKAN TERAPIS ────────────────────
                                 Column {
                                     SectionTitle("Tindakan Terapis *")
-                                    InputArea(value = action, onValueChange = { action = it }, height = 120.dp, placeholder = "Tindakan yang telah dilakukan...")
+                                    InputArea(value = action, onValueChange = { action = it }, height = 120.dp, placeholder = "Tindakan yang telah dilakukan...", enabled = !isLocked)
                                 }
 
                                 // ── 5. INPUT CATATAN TAMBAHAN ────────────────────
+
                                 Column {
                                     SectionTitle("Catatan Tambahan (Opsional)")
-                                    InputArea(value = notes, onValueChange = { notes = it }, height = 100.dp, placeholder = "Saran atau resep tambahan...")
+                                    InputArea(
+                                        value = notes, 
+                                        onValueChange = { notes = it }, 
+                                        height = 100.dp, 
+                                        placeholder = "Saran atau resep tambahan...",
+                                        enabled = !isLocked
+                                    )
                                 }
 
                                 Spacer(Modifier.height(10.dp))
 
                                 // ── 6. TOMBOL SIMPAN ─────────────────────────────
-                                MannaButton(
-                                    text = if (isLoading) "Menyimpan..." else "Simpan Catatan",
-                                    onClick = {
-                                        if (complaint.isNotBlank() && action.isNotBlank()) {
-                                             viewModel.createTherapyRecord(bookingId, patient?.id ?: 0, complaint, action, notes)
-                                        } else {
-                                            Toast.makeText(context, "Mohon lengkapi keluhan dan tindakan", Toast.LENGTH_SHORT).show()
-                                        }
-                                    },
-                                    modifier = Modifier.fillMaxWidth().height(56.dp),
-                                    enabled = !isLoading
-                                )
+                                if (!isLocked) {
+                                    MannaButton(
+                                        text = if (isLoading) "Menyimpan..." else if (recordId == null) "Simpan Catatan" else "Update Catatan",
+                                        onClick = {
+                                            if (complaint.isNotBlank() && action.isNotBlank()) {
+                                                if (recordId == null) {
+                                                    viewModel.createTherapyRecord(bookingId, patient?.id ?: 0, complaint, action, notes)
+                                                } else {
+                                                    viewModel.updateTherapyRecord(recordId, bookingId, patient?.id ?: 0, complaint, action, notes)
+                                                }
+                                            } else {
+                                                Toast.makeText(context, "Mohon lengkapi keluhan dan tindakan", Toast.LENGTH_SHORT).show()
+                                            }
+                                        },
+                                        modifier = Modifier.fillMaxWidth().height(56.dp),
+                                        enabled = !isLoading
+                                    )
+                                } else {
+                                    Surface(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        color = Color(0xFFFFF4F4),
+                                        shape = RoundedCornerShape(12.dp),
+                                        border = BorderStroke(1.dp, Color(0xFFFFCCCC))
+                                    ) {
+                                        Text(
+                                            "Sesi telah selesai. Catatan terapi tidak dapat diubah.",
+                                            modifier = Modifier.padding(16.dp),
+                                            color = Color(0xFFCC0000),
+                                            textAlign = TextAlign.Center,
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 14.sp
+                                        )
+                                    }
+                                }
                             }
                             is ApiResult.Error -> {
                                 Column(
@@ -331,10 +377,11 @@ private fun PersonRow(name: String, subtitle: String, imageUrl: String?) {
 
 // ── Input Area (Styling like TextPill but editable)
 @Composable
-private fun InputArea(value: String, onValueChange: (String) -> Unit, height: androidx.compose.ui.unit.Dp, placeholder: String) {
+private fun InputArea(value: String, onValueChange: (String) -> Unit, height: androidx.compose.ui.unit.Dp, placeholder: String, enabled: Boolean = true) {
     TextField(
         value = value,
         onValueChange = onValueChange,
+        enabled = enabled,
         modifier = Modifier
             .fillMaxWidth()
             .height(height)
@@ -342,14 +389,14 @@ private fun InputArea(value: String, onValueChange: (String) -> Unit, height: an
         colors = TextFieldDefaults.colors(
             focusedContainerColor = Color.White,
             unfocusedContainerColor = Color.White,
-            disabledContainerColor = DividerLight,
+            disabledContainerColor = Color(0xFFF9F9F9),
             focusedIndicatorColor = Color.Transparent,
             unfocusedIndicatorColor = Color.Transparent,
             cursorColor = GreenPrimary
         ),
         shape = RoundedCornerShape(16.dp),
         textStyle = MaterialTheme.typography.bodyMedium.copy(
-            color = SlateText,
+            color = if (enabled) SlateText else Color.Gray,
             lineHeight = 22.sp
         ),
         placeholder = { Text(placeholder, fontSize = 14.sp, color = Color.Gray.copy(alpha = 0.6f)) }

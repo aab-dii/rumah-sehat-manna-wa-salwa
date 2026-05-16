@@ -47,5 +47,8 @@ data class AppointmentInfo(
     val paymentRemainingSeconds: Long? = null,
 
     @SerializedName("therapy_record_id")
-    val therapyRecordId: Int? = null
+    val therapyRecordId: Int? = null,
+
+    @SerializedName("is_expired_warning")
+    val isExpiredWarning: Boolean = false
 )
