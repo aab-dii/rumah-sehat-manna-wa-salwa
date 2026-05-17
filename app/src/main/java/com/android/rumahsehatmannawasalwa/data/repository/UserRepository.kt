@@ -169,6 +169,59 @@ class UserRepository(
         }
     }
 
+    // =========================================================================
+    // SUPER ADMIN (Sprint 2.1)
+    // =========================================================================
+
+    /**
+     * Ambil daftar semua admin & super_admin.
+     */
+    suspend fun getAdminList(): ApiResult<List<User>> {
+        return try {
+            val response = apiService.getAdminList()
+            if (response.isSuccessful && response.body() != null) {
+                ApiResult.Success(response.body()!!.data)
+            } else {
+                ApiResult.Error(ErrorUtils.parseErrorMessage(response))
+            }
+        } catch (e: Exception) {
+            ApiResult.Error(e.message ?: "Gagal mengambil daftar admin")
+        }
+    }
+
+    /**
+     * Toggle aktif/nonaktif akun admin.
+     */
+    suspend fun toggleAdminActive(userId: Int): ApiResult<Unit> {
+        return try {
+            val response = apiService.toggleAdminActive(userId)
+            if (response.isSuccessful) {
+                ApiResult.Success(Unit)
+            } else {
+                ApiResult.Error(ErrorUtils.parseErrorMessage(response))
+            }
+        } catch (e: Exception) {
+            ApiResult.Error(e.message ?: "Gagal mengubah status admin")
+        }
+    }
+
+    /**
+     * Reset password admin/terapis — return temporary password.
+     */
+    suspend fun resetAdminPassword(userId: Int): ApiResult<String> {
+        return try {
+            val response = apiService.resetAdminPassword(userId)
+            if (response.isSuccessful && response.body() != null) {
+                val tempPassword = response.body()!!.data["temporary_password"] ?: ""
+                ApiResult.Success(tempPassword)
+            } else {
+                ApiResult.Error(ErrorUtils.parseErrorMessage(response))
+            }
+        } catch (e: Exception) {
+            ApiResult.Error(e.message ?: "Gagal mereset password")
+        }
+    }
+
     private fun prepareMultipartImage(uri: Uri, partName: String): MultipartBody.Part? {
         val file = FileUtils.getFileFromUri(context, uri) ?: return null
         val requestFile = file.asRequestBody("image/*".toMediaTypeOrNull())

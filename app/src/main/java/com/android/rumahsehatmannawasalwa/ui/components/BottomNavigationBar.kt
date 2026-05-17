@@ -75,7 +75,7 @@ fun BottomNavigationBar(
                         Triple("Riwayat", "therapist_patient_list", Icons.Default.History),
                         Triple("Profil", "therapist_profile", Icons.Default.Person)
                     )
-                    "admin" -> listOf(
+                    "admin", "super_admin" -> listOf(
                         Triple("Home", "admin_home", Icons.Default.Home),
                         Triple("Janji Temu", "admin_appointment", Icons.Default.DateRange),
                         Triple("Riwayat", "admin_patient_list", Icons.Default.History),

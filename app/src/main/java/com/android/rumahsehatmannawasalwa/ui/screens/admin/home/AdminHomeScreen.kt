@@ -111,7 +111,7 @@ fun AdminHomeScreen(
                     }
                 }
                 else -> {
-                    DashboardContent(navController, adminState, unreadCount)
+                    DashboardContent(navController, adminState, unreadCount, user?.role ?: "admin")
                 }
             }
         }
@@ -122,7 +122,8 @@ fun AdminHomeScreen(
 fun DashboardContent(
     navController: NavController,
     state: AdminDashboardState,
-    unreadCount: Int
+    unreadCount: Int,
+    currentUserRole: String = "admin" // Sprint 2.1
 ) {
     LazyColumn(
         contentPadding = PaddingValues(bottom = 80.dp),
@@ -132,7 +133,8 @@ fun DashboardContent(
             AdminGreetingHeader(
                 bookingCount = state.todayStats.confirmed,
                 unreadCount = unreadCount,
-                onNotifClick = { navController.navigate(Screen.Notifications.route) }
+                onNotifClick = { navController.navigate(Screen.Notifications.route) },
+                currentUserRole = currentUserRole // Sprint 2.1
             )
         }
         // white sheet
@@ -155,7 +157,7 @@ fun DashboardContent(
                     Spacer(modifier = Modifier.height(24.dp))
 
                     // 3. Quick Access Card
-                    AdminQuickActionsCard(navController)
+                    AdminQuickActionsCard(navController, currentUserRole)
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
@@ -188,8 +190,9 @@ fun DashboardContent(
 }
 
 @Composable
-fun AdminGreetingHeader(bookingCount: Int, unreadCount: Int, onNotifClick: () -> Unit) {
+fun AdminGreetingHeader(bookingCount: Int, unreadCount: Int, onNotifClick: () -> Unit, currentUserRole: String = "admin") {
     val greeting = adminGreeting()
+    val greetingName = if (currentUserRole == "super_admin") "Super Admin" else "Admin" // Sprint 2.1
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -206,7 +209,7 @@ fun AdminGreetingHeader(bookingCount: Int, unreadCount: Int, onNotifClick: () ->
         ) {
             Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Text(greeting, fontSize = 12.sp, color = Color.White.copy(alpha = 0.78f), fontWeight = FontWeight.Medium)
-                Text("Halo, Admin! 👋", fontSize = 20.sp, fontWeight = FontWeight.ExtraBold, color = Color.White)
+                Text("Halo, $greetingName! 👋", fontSize = 20.sp, fontWeight = FontWeight.ExtraBold, color = Color.White)
                 
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
@@ -401,6 +404,7 @@ fun AdminRevenueItem(
 @Composable
 fun AdminQuickActionsCard(
     navController: NavController,
+    currentUserRole: String = "admin", // Sprint 2.1
     modifier: Modifier = Modifier
 ) {
     Card(
@@ -433,8 +437,15 @@ fun AdminQuickActionsCard(
                     color = GreenPrimary,
                     onClick = { navController.navigate(Screen.AdminManageService.route) }
                 )
-
-
+                // Sprint 2.1: Tombol Kelola Admin hanya muncul untuk super_admin
+                if (currentUserRole == "super_admin") {
+                    AdminQuickActionItem(
+                        icon = Icons.Default.AdminPanelSettings,
+                        label = "Admin",
+                        color = AccentOrange,
+                        onClick = { navController.navigate(Screen.SuperAdminManageAdmins.route) }
+                    )
+                }
             }
         }
     }

@@ -111,7 +111,7 @@ fun AppNavGraph(
                 navController = navController,
                 onNavigateBack = { navController.popBackStack() },
                 onNotificationClick = { bid ->
-                    if (role == "admin") {
+                    if (role == "admin" || role == "super_admin") {
                         navController.navigate(Screen.AdminAppointmentDetail.createRoute(bid))
                     } else {
                         navController.navigate(Screen.PatientAppointmentDetail.createRoute(bid))
@@ -225,7 +225,7 @@ fun AppNavGraph(
             val recordId = backStackEntry.arguments?.getInt("recordId") ?: 0
             val userRole = userData?.role ?: ""
             // Guard akses
-            if (recordId != 0 && userRole in listOf("pasien", "terapis", "admin")) {
+            if (recordId != 0 && userRole in listOf("pasien", "terapis", "admin", "super_admin")) {
                 TherapyRecordDetailScreen(recordId, therapyRecordViewModel, navController)
             } else {
                 navController.popBackStack()
@@ -254,14 +254,20 @@ fun AppNavGraph(
         }
 
         // User Management
-        composable(Screen.AdminManageUser.route) { AdminManageUsersScreen(navController, adminUserViewModel) }
-        composable(Screen.AdminAddUser.route) { AdminAddUserScreen(navController, adminUserViewModel) }
+        composable(Screen.AdminManageUser.route) {
+            AdminManageUsersScreen(navController, adminUserViewModel, currentUserRole = userData?.role ?: "admin")
+        }
+        composable(Screen.AdminAddUser.route) { AdminAddUserScreen(navController, adminUserViewModel, currentUserRole = userData?.role ?: "admin") }
         composable(
             route = Screen.AdminUserDetail.route,
             arguments = listOf(navArgument("userId") { type = NavType.IntType })
         ) { backStackEntry ->
             val uid = backStackEntry.arguments?.getInt("userId") ?: 0
-            AdminUserDetailScreen(navController, adminUserViewModel, uid)
+            AdminUserDetailScreen(
+                navController, adminUserViewModel, uid,
+                currentUserRole = userData?.role ?: "admin",  // Sprint 2.1
+                currentUserId = userData?.id ?: 0             // Sprint 2.1
+            )
         }
         composable(
             route = Screen.AdminEditUser.route,
@@ -269,6 +275,11 @@ fun AppNavGraph(
         ) { backStackEntry ->
             val uid = backStackEntry.arguments?.getInt("userId") ?: 0
             AdminEditUserScreen(navController, adminUserViewModel, uid)
+        }
+
+        // Sprint 2.1: Super Admin Manage Admins — reuse AdminManageUsersScreen langsung ke tab Admin
+        composable(Screen.SuperAdminManageAdmins.route) {
+            AdminManageUsersScreen(navController, adminUserViewModel, currentUserRole = "super_admin")
         }
 
         // Patient History (Admin context)

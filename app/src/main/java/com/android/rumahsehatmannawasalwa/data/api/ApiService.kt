@@ -9,6 +9,7 @@ import com.android.rumahsehatmannawasalwa.data.model.booking.BookingResponse
 import com.android.rumahsehatmannawasalwa.data.model.booking.SingleBookingResponse
 import com.android.rumahsehatmannawasalwa.data.model.auth.RegisterRequest
 import com.android.rumahsehatmannawasalwa.data.model.auth.UpdateProfileRequest
+import com.android.rumahsehatmannawasalwa.data.model.auth.User
 import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.POST
@@ -251,4 +252,20 @@ interface ApiService {
 
     @DELETE("notifications/{id}")
     suspend fun deleteNotification(@Path("id") id: Int): Response<ApiResponse<Any>>
+
+    // =========================================================================
+    // SUPER ADMIN (Sprint 2.1)
+    // =========================================================================
+
+    /** List semua akun admin & super_admin */
+    @GET("super-admin/admins")
+    suspend fun getAdminList(): Response<ApiResponse<List<User>>>
+
+    /** Aktifkan/nonaktifkan akun admin */
+    @POST("super-admin/admins/{id}/toggle-active")
+    suspend fun toggleAdminActive(@Path("id") id: Int): Response<UserResponse>
+
+    /** Reset password admin/terapis — return temporary password */
+    @POST("super-admin/admins/{id}/reset-password")
+    suspend fun resetAdminPassword(@Path("id") id: Int): Response<ApiResponse<Map<String, String>>>
 }

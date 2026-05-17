@@ -66,7 +66,8 @@ fun DispatchScreen(
             Log.d("DispatchScreen", "Navigating based on role: ${user?.role}")
 
             val route = when (user?.role?.lowercase()) {
-                "admin" -> Screen.AdminHome.route
+                // Sprint 2.1: super_admin masuk ke dashboard admin yang sama
+                "admin", "super_admin" -> Screen.AdminHome.route
 
                 "therapist", "terapis" -> Screen.TherapistHome.route
 

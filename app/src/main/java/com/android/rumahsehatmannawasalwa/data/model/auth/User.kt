@@ -18,5 +18,12 @@ data class User(
     @SerializedName("profile_photo_url") val profilePhotoUrl: String? = null,
     @SerializedName("foto_url", alternate = ["photo_url"]) val fotoUrl: String? = null,
     @SerializedName("deleted_at") val deletedAt: String? = null,
-    @SerializedName("access_token") val accessToken: String? = null
-)
+    @SerializedName("access_token") val accessToken: String? = null,
+    @SerializedName("is_active") val isActive: Boolean = true,            // Sprint 2.1
+    @SerializedName("last_active_at") val lastActiveAt: String? = null    // Sprint 2.1
+) {
+    // Sprint 2.1: Helper properties untuk cek role
+    val isSuperAdmin get() = role == "super_admin"
+    val isAdmin get() = role == "admin"
+    val isAdminOrSuperAdmin get() = role == "admin" || role == "super_admin"
+}

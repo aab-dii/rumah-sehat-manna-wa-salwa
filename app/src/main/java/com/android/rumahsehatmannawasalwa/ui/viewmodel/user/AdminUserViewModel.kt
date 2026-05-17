@@ -11,8 +11,6 @@ import com.android.rumahsehatmannawasalwa.data.model.auth.RegisterRequest
 import com.android.rumahsehatmannawasalwa.data.model.auth.User
 import com.android.rumahsehatmannawasalwa.data.model.service.Service
 import com.android.rumahsehatmannawasalwa.data.repository.UserRepository
-import com.google.firebase.FirebaseApp
-import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.*
@@ -143,53 +141,32 @@ class AdminUserViewModel(
         }
     }
 
-    // Buat user baru via Firebase Secondary App agar admin tidak ikut logout
+    // Sprint 2.1: Pembuatan Firebase Auth dipindahkan sepenuhnya ke server-side Laravel
+    // agar transaksi aman & ada rollback otomatis jika database error.
     fun addUser(
         name: String, email: String, phone: String, role: String,
         job: String, specialization: List<String>?, address: String,
-        birthDate: String, gender: String
+        birthDate: String, gender: String,
+        password: String? = null
     ) {
         _actionState.value = ApiResult.Loading
 
-        // Password default diatur di ViewModel agar UI tetap bersih
-        val defaultPassword = "rumahsehat123"
-        
-        val appName = "AdminToolApp"
-        val secondaryApp = try {
-            FirebaseApp.getInstance(appName)
-        } catch (e: Exception) {
-            val options = FirebaseApp.getInstance().options
-            FirebaseApp.initializeApp(getApplication(), options, appName)
-        }
+        val finalPassword = password ?: "rumahsehat123"
 
-        val secondaryAuth = FirebaseAuth.getInstance(secondaryApp)
-        secondaryAuth.createUserWithEmailAndPassword(email, defaultPassword)
-            .addOnCompleteListener { task ->
-                if (task.isSuccessful) {
-                    val uid = task.result?.user?.uid
-                    if (uid != null) {
-                        val request = RegisterRequest(
-                            namaLengkap = name,
-                            email = email,
-                            password = defaultPassword,
-                            noHp = phone,
-                            role = role,
-                            firebaseUid = uid,
-                            pekerjaan = job,
-                            specialization = specialization,
-                            alamat = address,
-                            tglLahir = birthDate.ifBlank { "2000-01-01" },
-                            jenisKelamin = gender
-                        )
-                        saveUserToDb(request)
-                        secondaryAuth.signOut()
-                    }
-                } else {
-                    _actionState.value = ApiResult.Error(
-                        task.exception?.message ?: "Firebase Error"
-                    )
-                }
-            }
+        val request = RegisterRequest(
+            namaLengkap = name,
+            email = email,
+            password = finalPassword,
+            noHp = phone,
+            role = role,
+            firebaseUid = "", // Backend Laravel akan generate dinamis & mengabaikan ini
+            pekerjaan = job,
+            specialization = specialization,
+            alamat = address,
+            tglLahir = birthDate.ifBlank { "2000-01-01" },
+            jenisKelamin = gender
+        )
+        saveUserToDb(request)
     }
 
     private fun saveUserToDb(request: RegisterRequest) {
@@ -233,4 +210,44 @@ class AdminUserViewModel(
 
     fun onSearchQueryChanged(query: String) { _searchQuery.value = query }
     fun toggleTrashFilter(show: Boolean)    { _showTrashed.value = show  }
+
+    // -------------------------------------------------------------------------
+    // SUPER ADMIN (Sprint 2.1)
+    // -------------------------------------------------------------------------
+
+    private val _adminList = MutableStateFlow<ApiResult<List<User>>>(ApiResult.Loading)
+    val adminList: StateFlow<ApiResult<List<User>>> = _adminList
+
+    private val _resetPasswordResult = MutableStateFlow<ApiResult<String>?>(null)
+    val resetPasswordResult: StateFlow<ApiResult<String>?> = _resetPasswordResult
+
+    fun fetchAdminList() {
+        viewModelScope.launch {
+            _adminList.value = ApiResult.Loading
+            _adminList.value = repository.getAdminList()
+        }
+    }
+
+    fun toggleAdminActive(userId: Int) {
+        viewModelScope.launch {
+            _actionState.value = ApiResult.Loading
+            val result = repository.toggleAdminActive(userId)
+            _actionState.value = result
+            if (result is ApiResult.Success) {
+                fetchAdminList()
+                fetchUserDetail(userId) // Refresh detail juga
+            }
+        }
+    }
+
+    fun resetAdminPassword(userId: Int) {
+        viewModelScope.launch {
+            _resetPasswordResult.value = ApiResult.Loading
+            _resetPasswordResult.value = repository.resetAdminPassword(userId)
+        }
+    }
+
+    fun clearResetPasswordResult() {
+        _resetPasswordResult.value = null
+    }
 }

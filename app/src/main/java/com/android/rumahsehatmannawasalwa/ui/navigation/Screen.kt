@@ -100,5 +100,14 @@ sealed class Screen (val route: String) {
         val arguments = listOf(navArgument("patientId") { type = NavType.IntType })
         fun createRoute(id: Int) = "patient_history/$id"
     }
+
+    // Sprint 2.1: Super Admin
+    object SuperAdminManageAdmins : Screen("super_admin_manage_admins")
+    object SuperAdminAddAdmin : Screen("super_admin_add_admin")
+    object SuperAdminResetPassword : Screen("super_admin_reset_password/{userId}") {
+        val arguments = listOf(navArgument("userId") { type = NavType.IntType })
+        fun createRoute(id: Int) = "super_admin_reset_password/$id"
+    }
+
     object Offline : Screen ("offline")
 }

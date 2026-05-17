@@ -1,5 +1,6 @@
 package com.android.rumahsehatmannawasalwa.ui.screens.admin.users
 
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -49,13 +50,20 @@ import java.util.Calendar
 @Composable
 fun AdminAddUserScreen(
     navController: NavController,
-    viewModel: AdminUserViewModel
+    viewModel: AdminUserViewModel,
+    currentUserRole: String = "admin" // Sprint 2.1
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
 
-    val tabs = listOf("Pasien", "Terapis")
+    // Sprint 2.1: Tab "Admin" hanya muncul untuk super_admin
+    val isSuperAdmin = currentUserRole == "super_admin"
+    val tabs = buildList {
+        add("Pasien")
+        add("Terapis")
+        if (isSuperAdmin) add("Admin")
+    }
     val pagerState = rememberPagerState(pageCount = { tabs.size })
 
     var name by remember { mutableStateOf("") }
@@ -67,6 +75,8 @@ fun AdminAddUserScreen(
     var selectedGender by remember { mutableStateOf("Laki-laki") }
     var selectedGenderCode by remember { mutableStateOf("L") }
     var job by remember { mutableStateOf("") }
+    // Sprint 2.1: Field khusus tab Admin
+    var adminPassword by remember { mutableStateOf("") }
     var showSaveConfirm by remember { mutableStateOf(false) }
 
     val serviceList by viewModel.serviceList.collectAsState()
@@ -131,7 +141,7 @@ fun AdminAddUserScreen(
             Spacer(modifier = Modifier.height(12.dp))
 
             TopBar(
-                title = "Tambah Pengguna",
+                title = if (pagerState.currentPage == 2 && isSuperAdmin) "Tambah Admin" else "Tambah Pengguna",
                 subtitle = "Daftarkan pasien atau terapis baru ke sistem",
                 onBackClick = { navController.popBackStack() },
                 transparentBackground = true,
@@ -199,6 +209,7 @@ fun AdminAddUserScreen(
                             Spacer(modifier = Modifier.height(16.dp))
 
                             if (page == 0) {
+                                // Tab Pasien: field pekerjaan
                                 MannaTextField(
                                     label = "Pekerjaan",
                                     value = job,
@@ -206,7 +217,8 @@ fun AdminAddUserScreen(
                                     placeholder = "Masukkan pekerjaan",
                                     leadingIcon = Icons.Outlined.Work
                                 )
-                            } else {
+                            } else if (page == 1) {
+                                // Tab Terapis: spesialisasi
                                 Column(modifier = Modifier.fillMaxWidth()) {
                                     Text(
                                         "Spesialisasi (Layanan)",
@@ -251,6 +263,15 @@ fun AdminAddUserScreen(
                                         }
                                     }
                                 }
+                            } else if (page == 2 && isSuperAdmin) {
+                                // Sprint 2.1: Tab Admin — field password
+                                MannaTextField(
+                                    label = "Password",
+                                    value = adminPassword,
+                                    onValueChange = { adminPassword = it },
+                                    placeholder = "Minimal 8 karakter",
+                                    leadingIcon = Icons.Default.Lock
+                                )
                             }
 
                             Spacer(modifier = Modifier.height(16.dp))
@@ -329,13 +350,19 @@ fun AdminAddUserScreen(
 
                             Spacer(modifier = Modifier.height(40.dp))
 
+                            // Sprint 2.1: Validasi per tab
+                            val isFormValid = when (page) {
+                                0 -> name.isNotBlank() && email.isNotBlank() && job.isNotBlank()
+                                1 -> name.isNotBlank() && email.isNotBlank() && selectedServices.isNotEmpty()
+                                2 -> name.isNotBlank() && email.isNotBlank() && phone.isNotBlank() && adminPassword.length >= 8
+                                else -> false
+                            }
+
                             MannaButton(
                                 text = "Simpan Data",
                                 onClick = { showSaveConfirm = true },
                                 modifier = Modifier.fillMaxWidth(),
-                                enabled = name.isNotBlank() && email.isNotBlank() &&
-                                        (if (page == 0) job.isNotBlank() else selectedServices.isNotEmpty()) &&
-                                        actionState !is ApiResult.Loading
+                                enabled = isFormValid && actionState !is ApiResult.Loading
                             )
 
                             Spacer(modifier = Modifier.height(40.dp))
@@ -372,16 +399,24 @@ fun AdminAddUserScreen(
             description = "Apakah Anda yakin data yang dimasukkan sudah benar?",
             onConfirm = {
                 showSaveConfirm = false
+                // Sprint 2.1: Role berdasarkan tab aktif
+                val selectedRole = when (pagerState.currentPage) {
+                    0 -> "pasien"
+                    1 -> "terapis"
+                    2 -> "admin"
+                    else -> "pasien"
+                }
                 viewModel.addUser(
                     name = name,
                     email = email,
                     phone = phone,
-                    role = if (pagerState.currentPage == 0) "pasien" else "terapis",
+                    role = selectedRole,
                     job = if (pagerState.currentPage == 0) job else "",
                     specialization = if (pagerState.currentPage == 1) selectedServices.toList() else null,
                     address = address,
                     birthDate = birthDate,
-                    gender = selectedGenderCode
+                    gender = selectedGenderCode,
+                    password = if (pagerState.currentPage == 2) adminPassword else null
                 )
             },
             onDismiss = { showSaveConfirm = false }

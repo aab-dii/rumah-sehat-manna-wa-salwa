@@ -39,7 +39,9 @@ import com.android.rumahsehatmannawasalwa.ui.navigation.Screen
 fun AdminUserDetailScreen(
     navController: NavController,
     viewModel: AdminUserViewModel,
-    userId: Int
+    userId: Int,
+    currentUserRole: String = "admin",   // Sprint 2.1
+    currentUserId: Int = 0               // Sprint 2.1
 ) {
 
     LaunchedEffect(userId) {
@@ -51,6 +53,7 @@ fun AdminUserDetailScreen(
 
     val userState by viewModel.userDetailState.collectAsState()
     val actionState by viewModel.actionState.collectAsState()
+    val resetPasswordResult by viewModel.resetPasswordResult.collectAsState()
     val context = androidx.compose.ui.platform.LocalContext.current
 
     LaunchedEffect(actionState) {
@@ -88,6 +91,31 @@ fun AdminUserDetailScreen(
             val isDeactivated = user.deletedAt != null
             var showRestoreDialog by remember { mutableStateOf(false) }
             var showDeleteDialog by remember { mutableStateOf(false) }
+
+            // Sprint 2.1: Super Admin dialogs
+            val isSuperAdmin = currentUserRole == "super_admin"
+            val isSelf = user.id == currentUserId
+            val isTargetAdmin = user.isAdminOrSuperAdmin
+            var showToggleActiveDialog by remember { mutableStateOf(false) }
+            var showResetPasswordDialog by remember { mutableStateOf(false) }
+            var showTempPasswordDialog by remember { mutableStateOf(false) }
+            var tempPassword by remember { mutableStateOf("") }
+
+            // Sprint 2.1: Listen for reset password result
+            LaunchedEffect(resetPasswordResult) {
+                if (resetPasswordResult is ApiResult.Success) {
+                    tempPassword = (resetPasswordResult as ApiResult.Success<String>).data
+                    showTempPasswordDialog = true
+                    viewModel.clearResetPasswordResult()
+                } else if (resetPasswordResult is ApiResult.Error) {
+                    android.widget.Toast.makeText(
+                        context,
+                        (resetPasswordResult as ApiResult.Error).error,
+                        android.widget.Toast.LENGTH_LONG
+                    ).show()
+                    viewModel.clearResetPasswordResult()
+                }
+            }
 
             Scaffold(
                 containerColor = Color.Transparent,
@@ -161,6 +189,17 @@ fun AdminUserDetailScreen(
                                 Spacer(modifier = Modifier.height(8.dp))
                                 Text(
                                     "User Nonaktif",
+                                    color = Color.Red,
+                                    style = MaterialTheme.typography.labelMedium,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+
+                            // Sprint 2.1: Badge is_active untuk admin
+                            if (isTargetAdmin && !user.isActive) {
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(
+                                    "Akun Dinonaktifkan",
                                     color = Color.Red,
                                     style = MaterialTheme.typography.labelMedium,
                                     fontWeight = FontWeight.Bold
@@ -275,12 +314,41 @@ fun AdminUserDetailScreen(
                                 )
                             }
 
+                            // ═══════════════════════════════════════════════
+                            // Sprint 2.1: Super Admin Action Buttons
+                            // ═══════════════════════════════════════════════
+                            if (isSuperAdmin && isTargetAdmin && !isSelf) {
+                                Spacer(modifier = Modifier.height(16.dp))
+
+                                // Toggle Active (is_active, bukan soft delete)
+                                MannaButton(
+                                    text = if (user.isActive) "Nonaktifkan Akun Admin" else "Aktifkan Akun Admin",
+                                    onClick = { showToggleActiveDialog = true },
+                                    containerColor = if (user.isActive) AccentOrange else GreenPrimary,
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+
+                                Spacer(modifier = Modifier.height(8.dp))
+
+                                // Reset Password
+                                MannaButton(
+                                    text = "Reset Password",
+                                    onClick = { showResetPasswordDialog = true },
+                                    containerColor = AccentBlue,
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                            }
+
                             Spacer(modifier = Modifier.height(32.dp))
                         }
                     }
                 }
 
-                // Dialogs
+                // ═════════════════════════════════════════════════════
+                // DIALOGS
+                // ═════════════════════════════════════════════════════
+
+                // Existing: Delete (Soft Delete)
                 if (showDeleteDialog) {
                     AlertDialog(
                         onDismissRequest = { showDeleteDialog = false },
@@ -298,6 +366,7 @@ fun AdminUserDetailScreen(
                     )
                 }
 
+                // Existing: Restore
                 if (showRestoreDialog) {
                     AlertDialog(
                         onDismissRequest = { showRestoreDialog = false },
@@ -305,7 +374,7 @@ fun AdminUserDetailScreen(
                         text = { Text("Apakah Anda yakin ingin mengaktifkan kembali user '${user.name}'?") },
                         confirmButton = {
                             TextButton(onClick = {
-                                showRestoreDialog = true
+                                showRestoreDialog = false
                                 viewModel.restoreUser(user.id)
                             }, colors = ButtonDefaults.textButtonColors(contentColor = GreenPrimary)) { Text("Aktifkan") }
                         },
@@ -314,7 +383,93 @@ fun AdminUserDetailScreen(
                         }
                     )
                 }
+
+                // Sprint 2.1: Toggle Active Dialog
+                if (showToggleActiveDialog) {
+                    val action = if (user.isActive) "menonaktifkan" else "mengaktifkan"
+                    AlertDialog(
+                        onDismissRequest = { showToggleActiveDialog = false },
+                        title = { Text("${if (user.isActive) "Nonaktifkan" else "Aktifkan"} Admin?") },
+                        text = { Text("Apakah Anda yakin ingin $action akun '${user.name}'? ${if (user.isActive) "Admin tidak akan bisa login setelah dinonaktifkan." else ""}") },
+                        confirmButton = {
+                            TextButton(onClick = {
+                                showToggleActiveDialog = false
+                                viewModel.toggleAdminActive(user.id)
+                            }, colors = ButtonDefaults.textButtonColors(
+                                contentColor = if (user.isActive) Color.Red else GreenPrimary
+                            )) { Text(if (user.isActive) "Nonaktifkan" else "Aktifkan") }
+                        },
+                        dismissButton = {
+                            TextButton(onClick = { showToggleActiveDialog = false }) { Text("Batal") }
+                        }
+                    )
+                }
+
+                // Sprint 2.1: Reset Password Confirmation
+                if (showResetPasswordDialog) {
+                    AlertDialog(
+                        onDismissRequest = { showResetPasswordDialog = false },
+                        title = { Text("Reset Password?") },
+                        text = { Text("Password '${user.name}' akan direset dan diganti dengan password sementara. User akan diminta login ulang.") },
+                        confirmButton = {
+                            TextButton(onClick = {
+                                showResetPasswordDialog = false
+                                viewModel.resetAdminPassword(user.id)
+                            }, colors = ButtonDefaults.textButtonColors(contentColor = AccentBlue)) { Text("Reset") }
+                        },
+                        dismissButton = {
+                            TextButton(onClick = { showResetPasswordDialog = false }) { Text("Batal") }
+                        }
+                    )
+                }
+
+                // Sprint 2.1: Show Temporary Password (Copyable)
+                if (showTempPasswordDialog) {
+                    val clipboard = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                    AlertDialog(
+                        onDismissRequest = { showTempPasswordDialog = false },
+                        title = { Text("Password Berhasil Direset", fontWeight = FontWeight.Bold) },
+                        text = {
+                            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                                Text("Berikan password sementara ini kepada user:")
+                                Card(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    colors = CardDefaults.cardColors(containerColor = SurfaceGrey),
+                                    shape = RoundedCornerShape(12.dp)
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(16.dp).fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(
+                                            text = tempPassword,
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 18.sp,
+                                            color = GreenPrimary
+                                        )
+                                        IconButton(onClick = {
+                                            clipboard.setPrimaryClip(android.content.ClipData.newPlainText("password", tempPassword))
+                                            android.widget.Toast.makeText(context, "Password disalin!", android.widget.Toast.LENGTH_SHORT).show()
+                                        }) {
+                                            Icon(Icons.Default.ContentCopy, "Salin", tint = GreenPrimary)
+                                        }
+                                    }
+                                }
+                                Text(
+                                    "⚠️ Password ini hanya ditampilkan sekali. Pastikan sudah dicatat.",
+                                    fontSize = 12.sp,
+                                    color = Color.Red
+                                )
+                            }
+                        },
+                        confirmButton = {
+                            TextButton(onClick = { showTempPasswordDialog = false }) { Text("Tutup") }
+                        }
+                    )
+                }
             }
         }
     }
 }
+
