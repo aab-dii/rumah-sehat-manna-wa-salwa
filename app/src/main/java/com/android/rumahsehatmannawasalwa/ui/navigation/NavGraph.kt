@@ -124,6 +124,13 @@ fun AppNavGraph(
             ProfileDetailScreen(navController = navController, viewModel = authViewModel)
         }
 
+        composable(Screen.ChangePassword.route) {
+            com.android.rumahsehatmannawasalwa.ui.screens.profile.ChangePasswordScreen(
+                navController = navController,
+                viewModel = authViewModel
+            )
+        }
+
         composable(
             route = Screen.CompleteProfile.route,
             arguments = Screen.CompleteProfile.arguments

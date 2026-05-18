@@ -198,14 +198,58 @@ class AuthRepository(
         RetrofitClient.authToken = null
     }
 
-    // Kirim email reset password
+    // Kirim email reset password dengan validasi Laravel terlebih dahulu
     suspend fun resetPassword(email: String): ApiResult<Unit> {
         return try {
             if (email.isBlank()) return ApiResult.Error("Email tidak boleh kosong")
+            
+            // 1. Validasi ke Laravel (cek exist & pastikan role pasien)
+            val response = apiService.forgotPassword(mapOf("email" to email))
+            if (!response.isSuccessful) {
+                return ApiResult.Error(getErrorMessage(response))
+            }
+
+            // 2. Kirim email via Firebase
             firebaseAuth.sendPasswordResetEmail(email).await()
             ApiResult.Success(Unit)
         } catch (e: Exception) {
             ApiResult.Error(e.localizedMessage ?: "Gagal mengirim email reset password")
+        }
+    }
+
+    // Ubah Password via Halaman Profil
+    suspend fun changePassword(oldPass: String, newPass: String): ApiResult<Unit> {
+        return try {
+            // 1. Reauthenticate Firebase
+            val firebaseUser = firebaseAuth.currentUser
+                ?: return ApiResult.Error("Sesi telah berakhir. Silakan login kembali.")
+            
+            val email = firebaseUser.email
+                ?: return ApiResult.Error("Akun login Google tidak memiliki password, gunakan menu reset.")
+
+            val credential = com.google.firebase.auth.EmailAuthProvider.getCredential(email, oldPass)
+            firebaseUser.reauthenticate(credential).await()
+
+            // 2. Beritahu Laravel untuk mengupdate Hash dan Firebase Server
+            val request = mapOf(
+                "old_password" to oldPass,
+                "new_password" to newPass
+            )
+            val response = apiService.changePassword(request)
+            
+            if (response.isSuccessful) {
+                logOut()
+                ApiResult.Success(Unit)
+            } else {
+                ApiResult.Error(getErrorMessage(response))
+            }
+        } catch (e: Exception) {
+            val message = when (e) {
+                is com.google.firebase.auth.FirebaseAuthInvalidCredentialsException -> "Password lama tidak sesuai."
+                is com.google.firebase.auth.FirebaseAuthRecentLoginRequiredException -> "Sesi terlalu lama. Silakan login ulang."
+                else -> e.localizedMessage ?: "Gagal mengubah kata sandi."
+            }
+            ApiResult.Error(message)
         }
     }
 

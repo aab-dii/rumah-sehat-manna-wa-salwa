@@ -37,10 +37,16 @@ import retrofit2.http.*
 
 interface ApiService {
 
+    @POST("forgot-password")
+    suspend fun forgotPassword(@Body request: Map<String, String>): Response<ApiResponse<Any>>
+
     @POST("user/sync-firebase")
     suspend fun syncFirebase(
         @Body request: Map<String, String>
     ): Response<UserResponse>
+
+    @POST("user/change-password")
+    suspend fun changePassword(@Body request: Map<String, String>): Response<ApiResponse<Any>>
 
     @POST("logout")
     suspend fun logout(): Response<ApiResponse<Nothing>>

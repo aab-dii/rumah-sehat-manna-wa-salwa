@@ -313,7 +313,7 @@ fun LoginScreen(navController: NavController, viewModel: AuthViewModel) {
                     )
                     Spacer(modifier = Modifier.height(16.dp))
                     Text(
-                        text = "Masukkan email Anda untuk menerima link reset password.",
+                        text = "Masukkan email Anda untuk menerima link reset password.\nCek folder spam jika tidak menerima email. Link berlaku selama 1 jam.",
                         style = MaterialTheme.typography.bodyMedium.copy(color = BodyGray)
                     )
                     Spacer(modifier = Modifier.height(24.dp))

@@ -25,6 +25,10 @@ class AuthViewModel(
     private val _authState = MutableStateFlow<ApiResult<Unit>?>(null)
     val authState: StateFlow<ApiResult<Unit>?> = _authState.asStateFlow()
 
+    // State terpisah untuk Change Password agar tidak bertabrakan dengan authState
+    private val _changePasswordState = MutableStateFlow<ApiResult<Unit>?>(null)
+    val changePasswordState: StateFlow<ApiResult<Unit>?> = _changePasswordState.asStateFlow()
+
     // State untuk menyimpan data user yang sedang aktif
     private val _currentUserData = MutableStateFlow<User?>(repository.getCurrentUser())
     val currentUserData: StateFlow<User?> = _currentUserData.asStateFlow()
@@ -198,6 +202,7 @@ class AuthViewModel(
 
     fun resetState() {
         _authState.value = null
+        _changePasswordState.value = null
     }
 
     fun resetPassword(email: String) {
@@ -205,6 +210,14 @@ class AuthViewModel(
             _authState.value = ApiResult.Loading
             val result = repository.resetPassword(email)
             _authState.value = result
+        }
+    }
+
+    fun changePassword(oldPass: String, newPass: String) {
+        viewModelScope.launch {
+            _changePasswordState.value = ApiResult.Loading
+            val result = repository.changePassword(oldPass, newPass)
+            _changePasswordState.value = result
         }
     }
 

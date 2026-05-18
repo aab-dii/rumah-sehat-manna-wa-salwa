@@ -145,7 +145,7 @@ fun ProfileScreen(
                     ProfileMenuItem(
                         icon = Icons.Default.Lock,
                         title = "Ubah Kata Sandi",
-                        onClick = { /* TODO */ }
+                        onClick = { navController.navigate("change_password") }
                     )
                     HorizontalDivider(color = DividerLight, thickness = 1.dp)
 

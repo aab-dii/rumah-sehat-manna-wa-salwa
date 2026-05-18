@@ -464,7 +464,7 @@ fun AdminUserDetailScreen(
                             }
                         },
                         confirmButton = {
-                            TextButton(onClick = { showTempPasswordDialog = false }) { Text("Tutup") }
+                            TextButton(onClick = { showTempPasswordDialog = false }) { Text("Saya Sudah Memberitahu User") }
                         }
                     )
                 }

@@ -11,6 +11,7 @@ sealed class Screen (val route: String) {
     object Register : Screen("register")
     object Dispatch : Screen("dispatch")
     object Splash : Screen("splash")
+    object ChangePassword : Screen("change_password")
 
     // Patient
     object PatientHome : Screen("patient_home")
