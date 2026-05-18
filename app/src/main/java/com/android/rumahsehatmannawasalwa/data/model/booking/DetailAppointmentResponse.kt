@@ -50,5 +50,11 @@ data class AppointmentInfo(
     val therapyRecordId: Int? = null,
 
     @SerializedName("is_expired_warning")
-    val isExpiredWarning: Boolean = false
+    val isExpiredWarning: Boolean = false,
+
+    @SerializedName("queue_number")
+    val queueNumber: Int? = null,
+
+    @SerializedName("queue_info")
+    val queueInfo: String? = null
 )

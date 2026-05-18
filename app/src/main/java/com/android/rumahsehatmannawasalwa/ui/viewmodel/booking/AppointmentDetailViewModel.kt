@@ -72,19 +72,25 @@ class AppointmentDetailViewModel(private val repository: AppointmentRepository) 
                 _remainingSeconds.value = _remainingSeconds.value!! - 1
             }
             if (_remainingSeconds.value == 0L) {
-                // Ketika waktu habis di UI, otomatis ubah status menjadi canceled secara visual
                 val current = _detailState.value
                 if (current is ApiResult.Success) {
-                    val updatedAppointment = current.data.appointment?.copy(
-                        status = "canceled"
-                    )
-                    val updated = current.data.copy(
-                        isExpiredWarning = true,
-                        appointment = updatedAppointment,
-                        statusLabel = "Dibatalkan",
-                        statusColor = androidx.compose.ui.graphics.Color(0xFFC62828) // RedDanger
-                    )
-                    _detailState.value = ApiResult.Success(updated)
+                    val statusAsli = current.data.appointment?.status?.lowercase()
+                    val trxStatus = current.data.transaction?.status?.lowercase()
+                    val payMethod = current.data.transaction?.paymentMethod?.lowercase()
+
+                    // Hanya batalkan jika benar-benar pending, unpaid, dan transfer
+                    if (statusAsli == "pending" && trxStatus == "unpaid" && payMethod == "transfer") {
+                        val updatedAppointment = current.data.appointment.copy(
+                            status = "canceled"
+                        )
+                        val updated = current.data.copy(
+                            isExpiredWarning = true,
+                            appointment = updatedAppointment,
+                            statusLabel = "Dibatalkan",
+                            statusColor = androidx.compose.ui.graphics.Color(0xFFC62828) // RedDanger
+                        )
+                        _detailState.value = ApiResult.Success(updated)
+                    }
                 }
             }
         }

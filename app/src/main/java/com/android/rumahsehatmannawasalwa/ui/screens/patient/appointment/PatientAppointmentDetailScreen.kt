@@ -232,6 +232,16 @@ fun DetailContent(
 
         Column {
             SectionTitle("Info Janji Temu", color = SlateTextDark)
+            
+            val bStatus = data.appointment?.status?.lowercase()
+            if (data.appointment?.queueNumber != null && bStatus in listOf("confirmed", "in_progress", "force_completed")) {
+                QueueInfoCard(
+                    queueNumber = data.appointment.queueNumber,
+                    queueInfo = data.appointment.queueInfo
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+            }
+            
             MeetingInfoCard(data)
         }
 
@@ -558,5 +568,50 @@ fun ErrorView(error: String, onRetry: () -> Unit) {
     Column(Modifier.fillMaxSize(), Arrangement.Center, Alignment.CenterHorizontally) {
         Text(error, color = RedDanger)
         Button(onClick = onRetry) { Text("Coba Lagi") }
+    }
+}
+
+@Composable
+fun QueueInfoCard(queueNumber: Int, queueInfo: String?) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = GreenSoft
+        ),
+        shape = RoundedCornerShape(16.dp)
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(56.dp)
+                    .clip(CircleShape)
+                    .background(GreenPrimary),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = queueNumber.toString(),
+                    fontSize = 24.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = Color.White
+                )
+            }
+            Column {
+                Text(
+                    "Nomor Antrian Kamu",
+                    fontSize = 12.sp,
+                    color = GreenPrimary
+                )
+                Text(
+                    queueInfo ?: "Antrian ke-$queueNumber hari ini",
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = SlateTextDark
+                )
+            }
+        }
     }
 }
