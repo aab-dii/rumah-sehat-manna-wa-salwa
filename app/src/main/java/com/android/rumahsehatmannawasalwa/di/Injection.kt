@@ -67,4 +67,8 @@ object Injection {
         return ServiceRepository(RetrofitClient.instance)
     }
 
+    fun provideReportRepository(context: Context): com.android.rumahsehatmannawasalwa.data.repository.ReportRepository {
+        return com.android.rumahsehatmannawasalwa.data.repository.ReportRepository(RetrofitClient.instance)
+    }
+
 }

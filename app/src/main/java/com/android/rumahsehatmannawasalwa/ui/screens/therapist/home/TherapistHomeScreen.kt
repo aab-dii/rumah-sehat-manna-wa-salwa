@@ -363,6 +363,12 @@ private fun QuickActionsGrid(navController: NavController, onArticleClick: () ->
                     onClick = { navController.navigate(Screen.TherapistSchedule.route) }
                 )
                 QuickActionItem(
+                    icon = Icons.Default.Assessment,
+                    label = "Laporan",
+                    color = GreenPrimary,
+                    onClick = { navController.navigate(Screen.TherapistReport.route) }
+                )
+                QuickActionItem(
                     icon = Icons.Default.Article,
                     label = "Kelola Artikel",
                     color = AccentOrange,

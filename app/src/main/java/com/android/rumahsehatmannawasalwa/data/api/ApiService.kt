@@ -273,5 +273,128 @@ interface ApiService {
 
     /** Reset password admin/terapis — return temporary password */
     @POST("super-admin/admins/{id}/reset-password")
-    suspend fun resetAdminPassword(@Path("id") id: Int): Response<ApiResponse<Map<String, String>>>
+    suspend fun resetPasswordAdmin(@Path("id") id: Int): Response<ApiResponse<Map<String, String>>>
+
+    // Laporan (Sprint 3.1)
+    @GET("reports/financial")
+    suspend fun getFinancialReport(
+        @Query("period") period: String,
+        @Query("start_date") startDate: String?,
+        @Query("end_date") endDate: String?,
+        @Query("page") page: Int?,
+        @Query("export") export: Boolean? = false
+    ): Response<ApiResponse<com.android.rumahsehatmannawasalwa.data.model.report.FinancialReportResponse>>
+
+    @GET("reports/visits")
+    suspend fun getVisitsReport(
+        @Query("period") period: String,
+        @Query("start_date") startDate: String?,
+        @Query("end_date") endDate: String?,
+        @Query("therapist_id") therapistId: Int?,
+        @Query("page") page: Int?,
+        @Query("export") export: Boolean? = false
+    ): Response<ApiResponse<com.android.rumahsehatmannawasalwa.data.model.report.VisitReportResponse>>
+
+    @GET("reports/my-visits")
+    suspend fun getMyVisitsReport(
+        @Query("period") period: String,
+        @Query("start_date") startDate: String?,
+        @Query("end_date") endDate: String?,
+        @Query("page") page: Int?,
+        @Query("export") export: Boolean? = false
+    ): Response<ApiResponse<com.android.rumahsehatmannawasalwa.data.model.report.VisitReportResponse>>
+
+    @GET("reports/therapist-performance")
+    suspend fun getPerformanceReport(
+        @Query("period") period: String,
+        @Query("start_date") startDate: String?,
+        @Query("end_date") endDate: String?
+    ): Response<ApiResponse<com.android.rumahsehatmannawasalwa.data.model.report.PerformanceReportResponse>>
+
+    @GET("reports/my-performance")
+    suspend fun getMyPerformanceReport(
+        @Query("period") period: String,
+        @Query("start_date") startDate: String?,
+        @Query("end_date") endDate: String?
+    ): Response<ApiResponse<com.android.rumahsehatmannawasalwa.data.model.report.PerformanceReportResponse>>
+
+    @GET("reports/clinic-activity")
+    suspend fun getActivityReport(
+        @Query("period") period: String,
+        @Query("start_date") startDate: String?,
+        @Query("end_date") endDate: String?
+    ): Response<ApiResponse<com.android.rumahsehatmannawasalwa.data.model.report.ActivityReportResponse>>
+
+    @GET("reports/therapist-comparative")
+    suspend fun getComparativeReport(
+        @Query("period") period: String,
+        @Query("start_date") startDate: String?,
+        @Query("end_date") endDate: String?
+    ): Response<ApiResponse<com.android.rumahsehatmannawasalwa.data.model.report.ComparativeReportResponse>>
+
+    // PDF Export Endpoints
+    @GET("reports/export/financial")
+    @retrofit2.http.Streaming
+    suspend fun exportFinancialReport(
+        @Query("period") period: String,
+        @Query("start_date") startDate: String?,
+        @Query("end_date") endDate: String?
+    ): Response<okhttp3.ResponseBody>
+
+    @GET("reports/export/visits")
+    @retrofit2.http.Streaming
+    suspend fun exportVisitsReport(
+        @Query("period") period: String,
+        @Query("start_date") startDate: String?,
+        @Query("end_date") endDate: String?,
+        @Query("therapist_id") therapistId: Int?
+    ): Response<okhttp3.ResponseBody>
+
+    @GET("reports/export/my-visits")
+    @retrofit2.http.Streaming
+    suspend fun exportMyVisitsReport(
+        @Query("period") period: String,
+        @Query("start_date") startDate: String?,
+        @Query("end_date") endDate: String?
+    ): Response<okhttp3.ResponseBody>
+
+    @GET("reports/export/therapist-performance")
+    @retrofit2.http.Streaming
+    suspend fun exportPerformanceReport(
+        @Query("period") period: String,
+        @Query("start_date") startDate: String?,
+        @Query("end_date") endDate: String?
+    ): Response<okhttp3.ResponseBody>
+
+    @GET("reports/export/my-performance")
+    @retrofit2.http.Streaming
+    suspend fun exportMyPerformanceReport(
+        @Query("period") period: String,
+        @Query("start_date") startDate: String?,
+        @Query("end_date") endDate: String?
+    ): Response<okhttp3.ResponseBody>
+
+    @GET("reports/export/clinic-activity")
+    @retrofit2.http.Streaming
+    suspend fun exportActivityReport(
+        @Query("period") period: String,
+        @Query("start_date") startDate: String?,
+        @Query("end_date") endDate: String?
+    ): Response<okhttp3.ResponseBody>
+
+    @GET("reports/export/therapist-comparative")
+    @retrofit2.http.Streaming
+    suspend fun exportComparativeReport(
+        @Query("period") period: String,
+        @Query("start_date") startDate: String?,
+        @Query("end_date") endDate: String?
+    ): Response<okhttp3.ResponseBody>
+
+
+
+
+
+
+
+
 }

@@ -210,7 +210,7 @@ class UserRepository(
      */
     suspend fun resetAdminPassword(userId: Int): ApiResult<String> {
         return try {
-            val response = apiService.resetAdminPassword(userId)
+            val response = apiService.resetPasswordAdmin(userId)
             if (response.isSuccessful && response.body() != null) {
                 val tempPassword = response.body()!!.data["temporary_password"] ?: ""
                 ApiResult.Success(tempPassword)

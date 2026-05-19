@@ -60,6 +60,7 @@ sealed class Screen (val route: String) {
         val arguments = listOf(navArgument("userId") { type = NavType.IntType })
         fun createRoute(id: Int) = "admin_edit_user/$id"
     }
+    object AdminReport : Screen("admin_report")
     object AdminAddService : Screen("admin_add_service")
     object AdminServiceDetail : Screen("admin_service_detail/{serviceId}") {
         val arguments = listOf(navArgument("serviceId") { type = NavType.IntType })
@@ -97,6 +98,7 @@ sealed class Screen (val route: String) {
         fun createRoute(id: Int) = "therapy_record_detail/$id"
     }
     object TherapistProfile : Screen("therapist_profile")
+    object TherapistReport : Screen("therapist_report")
     object PatientHistory : Screen("patient_history/{patientId}") {
         val arguments = listOf(navArgument("patientId") { type = NavType.IntType })
         fun createRoute(id: Int) = "patient_history/$id"

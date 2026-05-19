@@ -238,12 +238,29 @@ fun AppNavGraph(
                 navController.popBackStack()
             }
         }
-
+        composable(Screen.TherapistReport.route) {
+            val reportViewModel: com.android.rumahsehatmannawasalwa.ui.viewmodel.admin.ReportViewModel = viewModel(
+                factory = ViewModelFactory.getInstance(context.applicationContext as Application)
+            )
+            com.android.rumahsehatmannawasalwa.ui.screens.therapist.report.TherapistReportScreen(navController, reportViewModel)
+        }
 
         // ── 5. ADMIN FEATURES ────────────────────────────────────────────────
         // Dashboard
         composable(Screen.AdminHome.route) {
             AdminHomeScreen(navController, adminDashboardViewModel, notificationViewModel, authViewModel)
+        }
+
+        composable(Screen.AdminReport.route) {
+            val reportViewModel: com.android.rumahsehatmannawasalwa.ui.viewmodel.admin.ReportViewModel = viewModel(
+                factory = ViewModelFactory.getInstance(LocalContext.current.applicationContext as Application)
+            )
+            com.android.rumahsehatmannawasalwa.ui.screens.admin.report.ReportScreen(
+                navController = navController,
+                viewModel = reportViewModel,
+                authViewModel = authViewModel,
+                adminUserViewModel = adminUserViewModel
+            )
         }
 
         // Appointment & Verification

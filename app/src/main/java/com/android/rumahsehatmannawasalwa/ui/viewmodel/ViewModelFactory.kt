@@ -33,7 +33,8 @@ class ViewModelFactory private constructor(
     private val userRepository: UserRepository,
     private val dashboardRepository: DashboardRepository,
     private val notificationRepository: NotificationRepository,
-    private val serviceRepository: ServiceRepository
+    private val serviceRepository: ServiceRepository,
+    private val reportRepository: com.android.rumahsehatmannawasalwa.data.repository.ReportRepository
 ) : ViewModelProvider.Factory {
 
     @Suppress("UNCHECKED_CAST")
@@ -73,6 +74,9 @@ class ViewModelFactory private constructor(
             modelClass.isAssignableFrom(TherapistDashboardViewModel::class.java) -> {
                 TherapistDashboardViewModel(dashboardRepository) as T
             }
+            modelClass.isAssignableFrom(com.android.rumahsehatmannawasalwa.ui.viewmodel.admin.ReportViewModel::class.java) -> {
+                com.android.rumahsehatmannawasalwa.ui.viewmodel.admin.ReportViewModel(reportRepository) as T
+            }
             else -> throw IllegalArgumentException("Unknown ViewModel class: " + modelClass.name)
         }
     }
@@ -95,7 +99,8 @@ class ViewModelFactory private constructor(
                         Injection.provideUserRepository(application),
                         Injection.provideDashboardRepository(application),
                         Injection.provideNotificationRepository(application),
-                        Injection.provideServiceRepository(application)
+                        Injection.provideServiceRepository(application),
+                        Injection.provideReportRepository(application)
                     )
                 }
             }.also { instance = it }
