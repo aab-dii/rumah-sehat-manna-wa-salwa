@@ -30,8 +30,11 @@ class NotificationViewModel(
     private val _localNotifications = MutableStateFlow<List<Notification>>(emptyList())
 
     init {
-        loadNotifications()
-        loadUnreadCount()
+        // Only load if we have a valid token (e.g. on auto-login startup)
+        if (!com.android.rumahsehatmannawasalwa.data.api.RetrofitClient.authToken.isNullOrEmpty()) {
+            loadNotifications()
+            loadUnreadCount()
+        }
     }
 
     fun loadNotifications() {
@@ -98,6 +101,11 @@ class NotificationViewModel(
         currentUserId?.let { PusherService.unsubscribeFromUserNotifications(it) }
 
         currentUserId = userId
+        
+        // Load fresh data when user/session is established
+        loadNotifications()
+        loadUnreadCount()
+
         PusherService.subscribeToUserNotifications(userId) { count ->
             val isNewNotification = count > _unreadCount.value
             _unreadCount.value = count

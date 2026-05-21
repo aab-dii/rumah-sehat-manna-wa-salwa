@@ -22,6 +22,7 @@ data class FinancialReportResponse(
     @SerializedName("total_revenue") val totalRevenue: Long,
     @SerializedName("total_success") val totalSuccess: Int,
     @SerializedName("total_canceled") val totalCanceled: Int,
+    @SerializedName("total_admin_fee") val totalAdminFee: Long = 0L,
     @SerializedName("revenue_by_service") val revenueByService: List<ServiceRevenue>,
     @SerializedName("transactions") val transactions: List<FinancialTransaction>,
     @SerializedName("pagination") val pagination: PaginationMeta?
@@ -41,7 +42,10 @@ data class FinancialTransaction(
     @SerializedName("service_name") val serviceName: String,
     @SerializedName("payment_method") val paymentMethod: String?,
     @SerializedName("status") val status: String,
-    @SerializedName("total_amount") val totalAmount: Long
+    @SerializedName("total_amount") val totalAmount: Long,
+    @SerializedName("is_refund") val isRefund: Boolean = false,
+    @SerializedName("verified_at") val verifiedAt: String? = null,
+    @SerializedName("refunded_at") val refundedAt: String? = null
 )
 
 // ═══════════════════════════════════════════════════════

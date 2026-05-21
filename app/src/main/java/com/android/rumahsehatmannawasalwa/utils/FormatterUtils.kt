@@ -19,8 +19,15 @@ object FormatterUtils {
     }
 
     fun formatRupiah(amount: Long): String {
+        if (amount < 0) {
+            val positiveFormatted = formatRupiah(-amount)
+            val cleanNumber = positiveFormatted.replace("Rp. ", "").replace("Rp", "").trim()
+            return "-Rp. $cleanNumber"
+        }
         val format = NumberFormat.getCurrencyInstance(Locale("id", "ID"))
-        return format.format(amount).replace("Rp", "Rp. ").substringBeforeLast(",")
+        val formatted = format.format(amount)
+        val cleanRp = formatted.replace("Rp", "Rp. ")
+        return if (cleanRp.contains(",")) cleanRp.substringBeforeLast(",") else cleanRp
     }
 
     /**

@@ -25,8 +25,6 @@ class TherapistDashboardViewModel(
     private val _state = MutableStateFlow(TherapistDailySummary())
     val state: StateFlow<TherapistDailySummary> = _state.asStateFlow()
 
-    init { refresh() }
-
     fun refresh() {
         viewModelScope.launch {
             _state.value = TherapistDailySummary(isLoading = true)

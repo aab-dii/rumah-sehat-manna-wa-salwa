@@ -81,6 +81,22 @@ class ReportViewModel(private val repository: ReportRepository) : ViewModel() {
     // Set filters and trigger reload
     fun setPeriod(newPeriod: String) {
         _period.value = newPeriod
+        val today = LocalDate.now()
+        val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")
+        when (newPeriod) {
+            "monthly" -> {
+                val firstDay = today.withDayOfMonth(1)
+                val lastDay = today.withDayOfMonth(today.lengthOfMonth())
+                _startDate.value = firstDay.format(formatter)
+                _endDate.value = lastDay.format(formatter)
+            }
+            "yearly" -> {
+                val firstDay = today.withMonth(1).withDayOfMonth(1)
+                val lastDay = today.withMonth(12).withDayOfMonth(31)
+                _startDate.value = firstDay.format(formatter)
+                _endDate.value = lastDay.format(formatter)
+            }
+        }
         resetPaginationAndFetch()
     }
 

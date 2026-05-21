@@ -32,6 +32,15 @@ import com.android.rumahsehatmannawasalwa.ui.viewmodel.admin.ReportViewModel
 import com.android.rumahsehatmannawasalwa.ui.viewmodel.auth.AuthViewModel
 import com.android.rumahsehatmannawasalwa.ui.viewmodel.user.AdminUserViewModel
 import com.android.rumahsehatmannawasalwa.utils.PdfGenerator
+import com.android.rumahsehatmannawasalwa.utils.FormatterUtils
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.ui.draw.clip
+import com.android.rumahsehatmannawasalwa.ui.components.appointment.StyledSearchableDropdown
+import com.android.rumahsehatmannawasalwa.ui.components.TopBar
+import com.android.rumahsehatmannawasalwa.ui.components.layouts.MannaSheet
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -93,124 +102,135 @@ fun ReportScreen(
         }
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Laporan Klinik", fontWeight = FontWeight.Bold, color = Color.White) },
-                navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Kembali", tint = Color.White)
-                    }
-                },
-                actions = {
-                    IconButton(
-                        onClick = {
-                            viewModel.setExporting(true)
-                            coroutineScope.launch {
-                                val responseBody = withContext(Dispatchers.IO) {
-                                    when (activeTab) {
-                                        0 -> viewModel.downloadFinancialPdf()
-                                        1 -> viewModel.downloadVisitsPdf(isAdmin = true)
-                                        2 -> viewModel.downloadPerformancePdf(isAdmin = true)
-                                        3 -> viewModel.downloadActivityPdf()
-                                        4 -> if (isSuperAdmin) viewModel.downloadComparativePdf() else null
-                                        else -> null
-                                    }
-                                }
-                                viewModel.setExporting(false)
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(
+                Brush.verticalGradient(
+                    colorStops = arrayOf(
+                        0.0f to GreenDark,
+                        0.25f to GreenLight,
+                        1.0f to GreenLight
+                    )
+                )
+            )
+            .statusBarsPadding()
+    ) {
+        Spacer(modifier = Modifier.height(12.dp))
 
-                                if (responseBody != null) {
-                                    val reportName = when (activeTab) {
-                                        0 -> "Laporan_Keuangan"
-                                        1 -> "Laporan_Kunjungan"
-                                        2 -> "Laporan_Kinerja_Terapis"
-                                        3 -> "Laporan_Kegiatan_Klinik"
-                                        4 -> "Laporan_Komparatif_Terapis"
-                                        else -> "Laporan"
-                                    }
-                                    val uri = withContext(Dispatchers.IO) {
-                                        PdfGenerator.savePdfToDownloads(context, responseBody, reportName)
-                                    }
-                                    if (uri != null) {
-                                        Toast.makeText(context, "PDF berhasil disimpan di Downloads/MannaWaSalwa", Toast.LENGTH_LONG).show()
-                                    } else {
-                                        Toast.makeText(context, "Gagal menyimpan PDF ke penyimpanan lokal", Toast.LENGTH_SHORT).show()
-                                    }
-                                } else {
-                                    Toast.makeText(context, "Gagal mengunduh PDF dari server", Toast.LENGTH_SHORT).show()
+        TopBar(
+            title = "Laporan Klinik",
+            onBackClick = { navController.popBackStack() },
+            actions = {
+                IconButton(
+                    onClick = {
+                        viewModel.setExporting(true)
+                        coroutineScope.launch {
+                            val responseBody = withContext(Dispatchers.IO) {
+                                when (activeTab) {
+                                    0 -> viewModel.downloadFinancialPdf()
+                                    1 -> viewModel.downloadVisitsPdf(isAdmin = true)
+                                    2 -> viewModel.downloadPerformancePdf(isAdmin = true)
+                                    3 -> viewModel.downloadActivityPdf()
+                                    4 -> if (isSuperAdmin) viewModel.downloadComparativePdf() else null
+                                    else -> null
                                 }
                             }
-                        },
-                        enabled = !isExporting
-                    ) {
-                        if (isExporting) {
-                            CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
-                        } else {
-                            Icon(Icons.Default.PictureAsPdf, contentDescription = "Ekspor PDF", tint = Color.White)
+                            viewModel.setExporting(false)
+
+                            if (responseBody != null) {
+                                val reportName = when (activeTab) {
+                                    0 -> "Laporan_Keuangan"
+                                    1 -> "Laporan_Kunjungan"
+                                    2 -> "Laporan_Kinerja_Terapis"
+                                    3 -> "Laporan_Kegiatan_Klinik"
+                                    4 -> "Laporan_Komparatif_Terapis"
+                                    else -> "Laporan"
+                                }
+                                val uri = withContext(Dispatchers.IO) {
+                                    PdfGenerator.savePdfToDownloads(context, responseBody, reportName)
+                                }
+                                if (uri != null) {
+                                    Toast.makeText(context, "PDF berhasil disimpan di Downloads/MannaWaSalwa", Toast.LENGTH_LONG).show()
+                                } else {
+                                    Toast.makeText(context, "Gagal menyimpan PDF ke penyimpanan lokal", Toast.LENGTH_SHORT).show()
+                                }
+                            } else {
+                                Toast.makeText(context, "Gagal mengunduh PDF dari server", Toast.LENGTH_SHORT).show()
+                            }
                         }
+                    },
+                    enabled = !isExporting
+                ) {
+                    if (isExporting) {
+                        CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
+                    } else {
+                        Icon(Icons.Default.PictureAsPdf, contentDescription = "Ekspor PDF", tint = Color.White)
                     }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = GreenPrimary)
-            )
-        }
-    ) { paddingValues ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .background(Color(0xFFF8FAFC))
+                }
+            },
+            transparentBackground = true,
+            hideBackground = true
+        )
+
+        Spacer(modifier = Modifier.height(20.dp))
+
+        MannaSheet(
+            modifier = Modifier.fillMaxSize()
         ) {
-            // --- Period & Date Filter Bar ---
-            FilterSection(
-                period = period,
-                startDate = startDate,
-                endDate = endDate,
-                onPeriodSelected = { viewModel.setPeriod(it) },
-                onDateRangeSelected = { start, end -> viewModel.setDateRange(start, end) }
-            )
+            Column(modifier = Modifier.fillMaxSize()) {
+                // --- Period & Date Filter Bar ---
+                FilterSection(
+                    period = period,
+                    startDate = startDate,
+                    endDate = endDate,
+                    onPeriodSelected = { viewModel.setPeriod(it) },
+                    onDateRangeSelected = { start, end -> viewModel.setDateRange(start, end) }
+                )
 
-            // --- Tab Selection ---
-            ScrollableTabRow(
-                selectedTabIndex = activeTab,
-                containerColor = Color.White,
-                contentColor = GreenPrimary,
-                edgePadding = 16.dp,
-                indicator = { tabPositions ->
-                    TabRowDefaults.SecondaryIndicator(
-                        modifier = Modifier.tabIndicatorOffset(tabPositions[activeTab]),
-                        color = GreenPrimary
-                    )
+                // --- Tab Selection ---
+                ScrollableTabRow(
+                    selectedTabIndex = activeTab,
+                    containerColor = Color.White,
+                    contentColor = GreenPrimary,
+                    edgePadding = 16.dp,
+                    indicator = { tabPositions ->
+                        TabRowDefaults.SecondaryIndicator(
+                            modifier = Modifier.tabIndicatorOffset(tabPositions[activeTab]),
+                            color = GreenPrimary
+                        )
+                    }
+                ) {
+                    tabs.forEachIndexed { index, title ->
+                        Tab(
+                            selected = activeTab == index,
+                            onClick = { activeTab = index },
+                            text = { Text(title, fontWeight = FontWeight.Bold) }
+                        )
+                    }
                 }
-            ) {
-                tabs.forEachIndexed { index, title ->
-                    Tab(
-                        selected = activeTab == index,
-                        onClick = { activeTab = index },
-                        text = { Text(title, fontWeight = FontWeight.Bold) }
-                    )
-                }
-            }
 
-            // --- Content ---
-            Box(modifier = Modifier.weight(1f)) {
-                when (activeTab) {
-                    0 -> FinancialTabContent(
-                        financialState = financialState,
-                        transactions = financialTransactions,
-                        onLoadMore = { viewModel.loadMoreFinancial() }
-                    )
-                    1 -> VisitsTabContent(
-                        visitsState = visitsState,
-                        visitsItems = visitsItems,
-                        therapists = therapistList,
-                        selectedTherapistId = selectedTherapistId,
-                        onTherapistSelected = { viewModel.setSelectedTherapistId(it) },
-                        onLoadMore = { viewModel.loadMoreVisits(isAdmin = true) }
-                    )
-                    2 -> PerformanceTabContent(performanceState = performanceState)
-                    3 -> ActivityTabContent(activityState = activityState)
-                    4 -> if (isSuperAdmin) {
-                        ComparativeTabContent(comparativeState = comparativeState)
+                // --- Content ---
+                Box(modifier = Modifier.weight(1f)) {
+                    when (activeTab) {
+                        0 -> FinancialTabContent(
+                            financialState = financialState,
+                            transactions = financialTransactions,
+                            onLoadMore = { viewModel.loadMoreFinancial() }
+                        )
+                        1 -> VisitsTabContent(
+                            visitsState = visitsState,
+                            visitsItems = visitsItems,
+                            therapists = therapistList,
+                            selectedTherapistId = selectedTherapistId,
+                            onTherapistSelected = { viewModel.setSelectedTherapistId(it) },
+                            onLoadMore = { viewModel.loadMoreVisits(isAdmin = true) }
+                        )
+                        2 -> PerformanceTabContent(performanceState = performanceState)
+                        3 -> ActivityTabContent(activityState = activityState)
+                        4 -> if (isSuperAdmin) {
+                            ComparativeTabContent(comparativeState = comparativeState)
+                        }
                     }
                 }
             }
@@ -246,7 +266,6 @@ fun FilterSection(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .background(Color.White)
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
@@ -277,6 +296,165 @@ fun FilterSection(
                         fontWeight = FontWeight.Bold,
                         fontSize = 13.sp
                     )
+                }
+            }
+        }
+
+        AnimatedVisibility(visible = period == "monthly") {
+            var expanded by remember { mutableStateOf(false) }
+            val currentLocalDate = remember { LocalDate.now() }
+            val monthFormatter = remember { java.time.format.DateTimeFormatter.ofPattern("MMMM yyyy", java.util.Locale("id", "ID")) }
+            val monthOptions = remember {
+                (0 until 24).map { currentLocalDate.minusMonths(it.toLong()) }
+            }
+            val parsedDate = remember(startDate) {
+                runCatching { LocalDate.parse(startDate) }.getOrNull() ?: LocalDate.now()
+            }
+            val selectedOption = remember(parsedDate, monthOptions) {
+                monthOptions.find { it.year == parsedDate.year && it.monthValue == parsedDate.monthValue } ?: monthOptions.first()
+            }
+
+            Column(modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) {
+                Text(
+                    text = "Pilih Bulan Laporan",
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = SlateTextDark,
+                    modifier = Modifier.padding(bottom = 4.dp)
+                )
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .border(1.dp, DividerLight, RoundedCornerShape(8.dp))
+                        .background(Color.White, RoundedCornerShape(8.dp))
+                        .clickable { expanded = true }
+                        .padding(horizontal = 12.dp, vertical = 12.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(Icons.Default.CalendarMonth, contentDescription = null, tint = GreenPrimary, modifier = Modifier.size(18.dp))
+                            Text(
+                                text = selectedOption.format(monthFormatter),
+                                color = SlateTextDark,
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
+                        Icon(Icons.Default.ArrowDropDown, contentDescription = null, tint = GrayText)
+                    }
+
+                    DropdownMenu(
+                        expanded = expanded,
+                        onDismissRequest = { expanded = false },
+                        modifier = Modifier
+                            .fillMaxWidth(0.9f)
+                            .background(Color.White)
+                    ) {
+                        monthOptions.forEach { option ->
+                            DropdownMenuItem(
+                                text = {
+                                    Text(
+                                        text = option.format(monthFormatter),
+                                        color = SlateTextDark,
+                                        fontSize = 14.sp
+                                    )
+                                },
+                                onClick = {
+                                    expanded = false
+                                    val start = option.withDayOfMonth(1)
+                                    val end = option.withDayOfMonth(option.lengthOfMonth())
+                                    val dbFormatter = java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd")
+                                    onDateRangeSelected(start.format(dbFormatter), end.format(dbFormatter))
+                                }
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        AnimatedVisibility(visible = period == "yearly") {
+            var expanded by remember { mutableStateOf(false) }
+            val currentLocalDate = remember { LocalDate.now() }
+            val yearOptions = remember {
+                (currentLocalDate.year downTo 2024).toList()
+            }
+            val parsedDate = remember(startDate) {
+                runCatching { LocalDate.parse(startDate) }.getOrNull() ?: LocalDate.now()
+            }
+            val selectedOption = remember(parsedDate, yearOptions) {
+                if (yearOptions.contains(parsedDate.year)) parsedDate.year else currentLocalDate.year
+            }
+
+            Column(modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) {
+                Text(
+                    text = "Pilih Tahun Laporan",
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = SlateTextDark,
+                    modifier = Modifier.padding(bottom = 4.dp)
+                )
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .border(1.dp, DividerLight, RoundedCornerShape(8.dp))
+                        .background(Color.White, RoundedCornerShape(8.dp))
+                        .clickable { expanded = true }
+                        .padding(horizontal = 12.dp, vertical = 12.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(Icons.Default.CalendarToday, contentDescription = null, tint = GreenPrimary, modifier = Modifier.size(18.dp))
+                            Text(
+                                text = "Tahun $selectedOption",
+                                color = SlateTextDark,
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
+                        Icon(Icons.Default.ArrowDropDown, contentDescription = null, tint = GrayText)
+                    }
+
+                    DropdownMenu(
+                        expanded = expanded,
+                        onDismissRequest = { expanded = false },
+                        modifier = Modifier
+                            .fillMaxWidth(0.9f)
+                            .background(Color.White)
+                    ) {
+                        yearOptions.forEach { option ->
+                            DropdownMenuItem(
+                                text = {
+                                    Text(
+                                        text = "Tahun $option",
+                                        color = SlateTextDark,
+                                        fontSize = 14.sp
+                                    )
+                                },
+                                onClick = {
+                                    expanded = false
+                                    val start = LocalDate.of(option, 1, 1)
+                                    val end = LocalDate.of(option, 12, 31)
+                                    val dbFormatter = java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd")
+                                    onDateRangeSelected(start.format(dbFormatter), end.format(dbFormatter))
+                                }
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -360,8 +538,6 @@ fun FinancialTabContent(
         return
     }
 
-    val idrFormat = NumberFormat.getCurrencyInstance(Locale("id", "ID"))
-
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(16.dp),
@@ -381,7 +557,7 @@ fun FinancialTabContent(
                         Text("Total Pendapatan", color = Color.White.copy(alpha = 0.8f), fontSize = 13.sp)
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            text = idrFormat.format(data.totalRevenue),
+                            text = FormatterUtils.formatRupiah(data.totalRevenue),
                             color = Color.White,
                             fontSize = 28.sp,
                             fontWeight = FontWeight.ExtraBold
@@ -408,8 +584,8 @@ fun FinancialTabContent(
                         shape = RoundedCornerShape(12.dp)
                     ) {
                         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                            Text("Canceled", color = GrayText, fontSize = 12.sp)
-                            Text("${data.totalCanceled} Booking", color = RedDanger, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                            Text("Biaya Admin", color = GrayText, fontSize = 12.sp)
+                            Text(FormatterUtils.formatRupiah(data.totalAdminFee), color = SlateTextDark, fontSize = 18.sp, fontWeight = FontWeight.Bold)
                         }
                     }
                 }
@@ -432,7 +608,7 @@ fun FinancialTabContent(
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Text(serviceRev.serviceName, color = SlateText, fontSize = 13.sp)
-                                    Text(idrFormat.format(serviceRev.revenue), fontWeight = FontWeight.Bold, color = GreenPrimary, fontSize = 13.sp)
+                                    Text(FormatterUtils.formatRupiah(serviceRev.revenue), fontWeight = FontWeight.Bold, color = GreenPrimary, fontSize = 13.sp)
                                 }
                             }
                         }
@@ -459,38 +635,143 @@ fun FinancialTabContent(
                     LaunchedEffect(Unit) { onLoadMore() }
                 }
 
+                val isRefund = tx.status == "refund" || tx.isRefund
+                val statusLabel = if (isRefund) "Refund / Dibatalkan" else "Paid / Sukses"
+                val statusColor = if (isRefund) Color(0xFFD97706) else Color(0xFF15803D)
+                val cardBgColor = if (isRefund) Color(0xFFFFFBEB) else Color.White
+                val cardBorder = if (isRefund) BorderStroke(1.dp, Color(0xFFFDE68A)) else BorderStroke(1.dp, Color(0xFFE2E8F0))
+                val priceLabel = if (isRefund) "Arus Kas Keluar (Refund Jasa Dibatalkan)" else "Arus Kas Masuk"
+                val priceColor = if (isRefund) Color(0xFFD97706) else GreenPrimary
+
+                val auditText = remember(isRefund, tx.verifiedAt, tx.refundedAt) {
+                    if (isRefund) {
+                        val dateStr = tx.refundedAt
+                        if (!dateStr.isNullOrEmpty()) {
+                            try {
+                                val parsed = java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale.US).parse(dateStr)
+                                if (parsed != null) {
+                                    "Dibatalkan & Direfund pada: " + java.text.SimpleDateFormat("d MMMM yyyy HH:mm", java.util.Locale("id", "ID")).format(parsed)
+                                } else {
+                                    "Dibatalkan & Direfund pada: $dateStr"
+                                }
+                            } catch (e: Exception) {
+                                "Dibatalkan & Direfund pada: $dateStr"
+                            }
+                        } else null
+                    } else {
+                        val dateStr = tx.verifiedAt
+                        if (!dateStr.isNullOrEmpty()) {
+                            try {
+                                val parsed = java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale.US).parse(dateStr)
+                                if (parsed != null) {
+                                    "Diverifikasi pada: " + java.text.SimpleDateFormat("d MMMM yyyy HH:mm", java.util.Locale("id", "ID")).format(parsed)
+                                } else {
+                                    "Diverifikasi pada: $dateStr"
+                                }
+                            } catch (e: Exception) {
+                                "Diverifikasi pada: $dateStr"
+                            }
+                        } else null
+                    }
+                }
+
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color.White),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+                    colors = CardDefaults.cardColors(containerColor = cardBgColor),
+                    shape = RoundedCornerShape(20.dp),
+                    border = cardBorder,
+                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
                 ) {
-                    Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
+                            Text(
+                                text = "Pasien: ${tx.patientName}",
+                                fontWeight = FontWeight.ExtraBold,
+                                color = SlateTextDark,
+                                fontSize = 16.sp
+                            )
+
+                            Surface(
+                                color = statusColor.copy(alpha = 0.12f),
+                                shape = RoundedCornerShape(50.dp),
+                                border = BorderStroke(0.5.dp, statusColor.copy(alpha = 0.5f))
+                            ) {
+                                Text(
+                                    text = statusLabel,
+                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = statusColor
+                                )
+                            }
+                        }
+
+                        val formattedDate = remember(tx.bookingDate) {
+                            if (tx.bookingDate.isNullOrEmpty()) "-"
+                            else {
+                                try {
+                                    val parsed = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).parse(tx.bookingDate)
+                                    if (parsed != null) {
+                                        java.text.SimpleDateFormat("d MMMM yyyy", java.util.Locale("id", "ID")).format(parsed)
+                                    } else {
+                                        tx.bookingDate
+                                    }
+                                } catch (e: Exception) {
+                                    tx.bookingDate
+                                }
+                            }
+                        }
+
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.Event, null, modifier = Modifier.size(16.dp), tint = GreenPrimary)
+                                Spacer(Modifier.width(8.dp))
+                                Text("$formattedDate - ${tx.serviceName}", fontSize = 13.sp, color = GrayText, fontWeight = FontWeight.Medium)
+                            }
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.Person, null, modifier = Modifier.size(16.dp), tint = GreenPrimary)
+                                Spacer(Modifier.width(8.dp))
+                                Text("Terapis: ${tx.therapistName}", fontSize = 13.sp, color = GrayText, fontWeight = FontWeight.Medium)
+                            }
+                            if (!tx.paymentMethod.isNullOrBlank()) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(Icons.Default.Payment, null, modifier = Modifier.size(16.dp), tint = GreenPrimary)
+                                    Spacer(Modifier.width(8.dp))
+                                    Text("Metode Pembayaran: ${tx.paymentMethod}", fontSize = 13.sp, color = GrayText, fontWeight = FontWeight.Medium)
+                                }
+                            }
+                        }
+
+                        HorizontalDivider(color = DividerLight, thickness = 1.dp)
+
                         Row(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text(tx.bookingDate ?: "-", fontSize = 11.sp, color = GrayText)
                             Text(
-                                text = tx.status,
-                                fontSize = 11.sp,
+                                text = priceLabel,
+                                fontSize = 13.sp,
+                                color = GrayText,
+                                fontWeight = FontWeight.Medium
+                            )
+                            Text(
+                                text = if (isRefund) FormatterUtils.formatRupiah(tx.totalAmount) else "+${FormatterUtils.formatRupiah(tx.totalAmount)}",
                                 fontWeight = FontWeight.Bold,
-                                color = if (tx.status.lowercase() == "canceled" || tx.status.lowercase() == "dibatalkan") RedDanger else GreenPrimary
+                                fontSize = 16.sp,
+                                color = priceColor
                             )
                         }
-                        Text(tx.patientName, fontWeight = FontWeight.Bold, fontSize = 15.sp, color = SlateTextDark)
-                        Text(
-                            text = "${tx.serviceName} • ${tx.therapistName} (${tx.paymentMethod ?: "-"})",
-                            fontSize = 13.sp,
-                            color = GrayText
-                        )
-                        Text(
-                            text = idrFormat.format(tx.totalAmount),
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 15.sp,
-                            color = GreenPrimary,
-                            modifier = Modifier.align(Alignment.End)
-                        )
+
+                        auditText?.let {
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = it,
+                                fontSize = 11.sp,
+                                color = GrayText.copy(alpha = 0.8f),
+                                fontWeight = FontWeight.Normal
+                            )
+                        }
                     }
                 }
             }
@@ -519,53 +800,36 @@ fun VisitsTabContent(
     onTherapistSelected: (Int?) -> Unit,
     onLoadMore: () -> Unit
 ) {
-    var expanded by remember { mutableStateOf(false) }
+    val allTherapistsList = remember(therapists) {
+        listOf(User(id = -1, name = "Semua Terapis")) + therapists
+    }
+    val selectedTherapist = remember(selectedTherapistId, allTherapistsList) {
+        allTherapistsList.find { it.id == (selectedTherapistId ?: -1) }
+    }
 
     Column(modifier = Modifier.fillMaxSize()) {
-        // Therapist Filter Dropdown
+        // Therapist Filter Dropdown using custom StyledSearchableDropdown (no photo)
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(Color.White)
                 .padding(horizontal = 16.dp, vertical = 8.dp)
         ) {
-            val selectedName = therapists.find { it.id == selectedTherapistId }?.name ?: "Semua Terapis"
-            ExposedDropdownMenuBox(
-                expanded = expanded,
-                onExpandedChange = { expanded = !expanded }
-            ) {
-                OutlinedTextField(
-                    value = selectedName,
-                    onValueChange = {},
-                    readOnly = true,
-                    label = { Text("Filter Terapis") },
-                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .menuAnchor()
-                )
-                ExposedDropdownMenu(
-                    expanded = expanded,
-                    onDismissRequest = { expanded = false }
-                ) {
-                    DropdownMenuItem(
-                        text = { Text("Semua Terapis") },
-                        onClick = {
-                            onTherapistSelected(null)
-                            expanded = false
-                        }
-                    )
-                    therapists.forEach { therapist ->
-                        DropdownMenuItem(
-                            text = { Text(therapist.name) },
-                            onClick = {
-                                onTherapistSelected(therapist.id)
-                                expanded = false
-                            }
-                        )
+            StyledSearchableDropdown(
+                label = "Filter Terapis",
+                items = allTherapistsList,
+                selectedItem = selectedTherapist,
+                onItemSelected = { user ->
+                    if (user.id == -1) {
+                        onTherapistSelected(null)
+                    } else {
+                        onTherapistSelected(user.id)
                     }
-                }
-            }
+                },
+                itemToString = { it.name },
+                placeholder = "Pilih Terapis",
+                leadingIcon = Icons.Default.Person,
+                itemImage = { null } // Gak usah ada fotonya
+            )
         }
 
         if (visitsState is ApiResult.Loading && visitsItems.isEmpty()) {
@@ -601,7 +865,7 @@ fun VisitsTabContent(
                             Text("Ringkasan Kunjungan", fontWeight = FontWeight.Bold, fontSize = 15.sp, color = SlateTextDark)
                             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                                 Text("Total Kunjungan", color = GrayText, fontSize = 13.sp)
-                                Text("${sum.totalVisits} orang", fontWeight = FontWeight.Bold, color = SlateTextDark, fontSize = 13.sp)
+                                Text("${sum.totalVisits} kunjungan", fontWeight = FontWeight.Bold, color = SlateTextDark, fontSize = 13.sp)
                             }
                             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                                 Text("Laki-laki / Perempuan", color = GrayText, fontSize = 13.sp)
@@ -681,8 +945,6 @@ fun PerformanceTabContent(performanceState: ApiResult<PerformanceReportResponse>
                 return
             }
 
-            val idrFormat = NumberFormat.getCurrencyInstance(Locale("id", "ID"))
-
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(16.dp),
@@ -697,7 +959,7 @@ fun PerformanceTabContent(performanceState: ApiResult<PerformanceReportResponse>
                     ) {
                         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             Text(item.therapistName, fontWeight = FontWeight.Bold, fontSize = 16.sp, color = SlateTextDark)
-                            Divider(color = DividerLight)
+                             HorizontalDivider(color = DividerLight)
                             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                                 Text("Total Sesi", color = GrayText, fontSize = 13.sp)
                                 Text("${item.totalSessions} sesi", fontWeight = FontWeight.Bold, color = SlateTextDark, fontSize = 13.sp)
@@ -716,13 +978,15 @@ fun PerformanceTabContent(performanceState: ApiResult<PerformanceReportResponse>
                             }
                             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                                 Text("Pendapatan Terkumpul", color = GrayText, fontSize = 13.sp)
-                                Text(idrFormat.format(item.totalRevenue), fontWeight = FontWeight.Bold, color = GreenPrimary, fontSize = 13.sp)
+                                Text(FormatterUtils.formatRupiah(item.totalRevenue), fontWeight = FontWeight.Bold, color = GreenPrimary, fontSize = 13.sp)
                             }
                         }
                     }
                 }
             }
         }
+
+        else -> {}
     }
 }
 
@@ -744,7 +1008,6 @@ fun ActivityTabContent(activityState: ApiResult<ActivityReportResponse>) {
         }
         is ApiResult.Success -> {
             val data = activityState.data
-            val idrFormat = NumberFormat.getCurrencyInstance(Locale("id", "ID"))
 
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
@@ -770,7 +1033,7 @@ fun ActivityTabContent(activityState: ApiResult<ActivityReportResponse>) {
                             }
                             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                                 Text("Total Pendapatan", color = GrayText, fontSize = 13.sp)
-                                Text(idrFormat.format(data.summary.totalRevenue), fontWeight = FontWeight.Bold, color = GreenPrimary, fontSize = 13.sp)
+                                Text(FormatterUtils.formatRupiah(data.summary.totalRevenue), fontWeight = FontWeight.Bold, color = GreenPrimary, fontSize = 13.sp)
                             }
                             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                                 Text("Layanan Terlaris", color = GrayText, fontSize = 13.sp)
@@ -800,14 +1063,14 @@ fun ActivityTabContent(activityState: ApiResult<ActivityReportResponse>) {
                                         Text("${service.totalSessions} Sesi (${String.format("%.1f", service.percentage)}%)", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = SlateTextDark)
                                     }
                                     LinearProgressIndicator(
-                                        progress = (service.percentage / 100.0).toFloat(),
+                                        progress = { (service.percentage / 100.0).toFloat() },
                                         modifier = Modifier
                                             .fillMaxWidth()
                                             .height(8.dp),
                                         color = GreenPrimary,
                                         trackColor = Color(0xFFF1F5F9)
                                     )
-                                    Text(idrFormat.format(service.revenue), color = GrayText, fontSize = 11.sp, modifier = Modifier.align(Alignment.End))
+                                    Text(FormatterUtils.formatRupiah(service.revenue), color = GrayText, fontSize = 11.sp, modifier = Modifier.align(Alignment.End))
                                 }
                             }
                         }
@@ -842,8 +1105,6 @@ fun ComparativeTabContent(comparativeState: ApiResult<ComparativeReportResponse>
                 }
                 return
             }
-
-            val idrFormat = NumberFormat.getCurrencyInstance(Locale("id", "ID"))
 
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
@@ -908,14 +1169,14 @@ fun ComparativeTabContent(comparativeState: ApiResult<ComparativeReportResponse>
                                 }
                                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                                     Text("${item.totalSessions} Sesi • ${item.totalPatients} Pasien", fontSize = 13.sp, color = GrayText)
-                                    Text(idrFormat.format(item.revenue), fontSize = 13.sp, fontWeight = FontWeight.Bold, color = GreenPrimary)
+                                    Text(FormatterUtils.formatRupiah(item.revenue), fontSize = 13.sp, fontWeight = FontWeight.Bold, color = GreenPrimary)
                                 }
 
                                 Spacer(modifier = Modifier.height(4.dp))
                                 // Visual bar and percentage contribution
                                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                     LinearProgressIndicator(
-                                        progress = (item.percentage / 100.0).toFloat(),
+                                        progress = { (item.percentage / 100.0).toFloat() },
                                         modifier = Modifier
                                             .weight(1f)
                                             .height(6.dp),
@@ -1002,7 +1263,7 @@ fun VisitReportCard(visit: VisitItem) {
                 )
             }
 
-            Divider(color = DividerLight)
+            HorizontalDivider(color = DividerLight)
 
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {

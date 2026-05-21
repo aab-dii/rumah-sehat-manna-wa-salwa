@@ -72,6 +72,11 @@ fun TherapistHomeScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
 
+    LaunchedEffect(Unit) {
+        dashboardViewModel.refresh()
+        notificationViewModel.loadUnreadCount()
+    }
+
     Scaffold(
         containerColor = BackgroundWhite,
         snackbarHost = { SnackbarHost(snackbarHostState) }

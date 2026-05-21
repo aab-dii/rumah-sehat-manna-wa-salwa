@@ -28,6 +28,10 @@ import com.android.rumahsehatmannawasalwa.data.model.report.*
 import com.android.rumahsehatmannawasalwa.ui.theme.*
 import com.android.rumahsehatmannawasalwa.ui.viewmodel.admin.ReportViewModel
 import com.android.rumahsehatmannawasalwa.utils.PdfGenerator
+import com.android.rumahsehatmannawasalwa.utils.FormatterUtils
+import androidx.compose.ui.graphics.Brush
+import com.android.rumahsehatmannawasalwa.ui.components.TopBar
+import com.android.rumahsehatmannawasalwa.ui.components.layouts.MannaSheet
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -61,106 +65,117 @@ fun TherapistReportScreen(
         viewModel.fetchPerformanceReport(isAdmin = false)
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Laporan Saya", fontWeight = FontWeight.Bold, color = Color.White) },
-                navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Kembali", tint = Color.White)
-                    }
-                },
-                actions = {
-                    IconButton(
-                        onClick = {
-                            viewModel.setExporting(true)
-                            coroutineScope.launch {
-                                val responseBody = withContext(Dispatchers.IO) {
-                                    if (activeTab == 0) {
-                                        viewModel.downloadVisitsPdf(isAdmin = false)
-                                    } else {
-                                        viewModel.downloadPerformancePdf(isAdmin = false)
-                                    }
-                                }
-                                viewModel.setExporting(false)
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(
+                Brush.verticalGradient(
+                    colorStops = arrayOf(
+                        0.0f to GreenDark,
+                        0.25f to GreenLight,
+                        1.0f to GreenLight
+                    )
+                )
+            )
+            .statusBarsPadding()
+    ) {
+        Spacer(modifier = Modifier.height(12.dp))
 
-                                if (responseBody != null) {
-                                    val reportName = if (activeTab == 0) "Laporan_Kunjungan_Terapis" else "Laporan_Kinerja_Terapis"
-                                    val uri = withContext(Dispatchers.IO) {
-                                        PdfGenerator.savePdfToDownloads(context, responseBody, reportName)
-                                    }
-                                    if (uri != null) {
-                                        Toast.makeText(context, "PDF berhasil disimpan di Downloads/MannaWaSalwa", Toast.LENGTH_LONG).show()
-                                    } else {
-                                        Toast.makeText(context, "Gagal menyimpan PDF ke penyimpanan lokal", Toast.LENGTH_SHORT).show()
-                                    }
+        TopBar(
+            title = "Laporan Saya",
+            onBackClick = { navController.popBackStack() },
+            actions = {
+                IconButton(
+                    onClick = {
+                        viewModel.setExporting(true)
+                        coroutineScope.launch {
+                            val responseBody = withContext(Dispatchers.IO) {
+                                if (activeTab == 0) {
+                                    viewModel.downloadVisitsPdf(isAdmin = false)
                                 } else {
-                                    Toast.makeText(context, "Gagal mengunduh PDF dari server", Toast.LENGTH_SHORT).show()
+                                    viewModel.downloadPerformancePdf(isAdmin = false)
                                 }
                             }
-                        },
-                        enabled = !isExporting
-                    ) {
-                        if (isExporting) {
-                            CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
-                        } else {
-                            Icon(Icons.Default.PictureAsPdf, contentDescription = "Ekspor PDF", tint = Color.White)
-                        }
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = GreenPrimary)
-            )
-        }
-    ) { paddingValues ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .background(Color(0xFFF8FAFC))
-        ) {
-            // --- Period & Date Filter Bar ---
-            FilterSection(
-                period = period,
-                startDate = startDate,
-                endDate = endDate,
-                onPeriodSelected = { viewModel.setPeriod(it) },
-                onDateRangeSelected = { start, end -> viewModel.setDateRange(start, end) }
-            )
+                            viewModel.setExporting(false)
 
-            // --- Tab Selection ---
-            TabRow(
-                selectedTabIndex = activeTab,
-                containerColor = Color.White,
-                contentColor = GreenPrimary,
-                indicator = { tabPositions ->
-                    TabRowDefaults.SecondaryIndicator(
-                        modifier = Modifier.tabIndicatorOffset(tabPositions[activeTab]),
-                        color = GreenPrimary
+                            if (responseBody != null) {
+                                val reportName = if (activeTab == 0) "Laporan_Kunjungan_Terapis" else "Laporan_Kinerja_Terapis"
+                                val uri = withContext(Dispatchers.IO) {
+                                    PdfGenerator.savePdfToDownloads(context, responseBody, reportName)
+                                }
+                                if (uri != null) {
+                                    Toast.makeText(context, "PDF berhasil disimpan di Downloads/MannaWaSalwa", Toast.LENGTH_LONG).show()
+                                } else {
+                                    Toast.makeText(context, "Gagal menyimpan PDF ke penyimpanan lokal", Toast.LENGTH_SHORT).show()
+                                }
+                            } else {
+                                Toast.makeText(context, "Gagal mengunduh PDF dari server", Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                    },
+                    enabled = !isExporting
+                ) {
+                    if (isExporting) {
+                        CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
+                    } else {
+                        Icon(Icons.Default.PictureAsPdf, contentDescription = "Ekspor PDF", tint = Color.White)
+                    }
+                }
+            },
+            transparentBackground = true,
+            hideBackground = true
+        )
+
+        Spacer(modifier = Modifier.height(20.dp))
+
+        MannaSheet(
+            modifier = Modifier.fillMaxSize()
+        ) {
+            Column(modifier = Modifier.fillMaxSize()) {
+                // --- Period & Date Filter Bar ---
+                FilterSection(
+                    period = period,
+                    startDate = startDate,
+                    endDate = endDate,
+                    onPeriodSelected = { viewModel.setPeriod(it) },
+                    onDateRangeSelected = { start, end -> viewModel.setDateRange(start, end) }
+                )
+
+                // --- Tab Selection ---
+                TabRow(
+                    selectedTabIndex = activeTab,
+                    containerColor = Color.White,
+                    contentColor = GreenPrimary,
+                    indicator = { tabPositions ->
+                        TabRowDefaults.SecondaryIndicator(
+                            modifier = Modifier.tabIndicatorOffset(tabPositions[activeTab]),
+                            color = GreenPrimary
+                        )
+                    }
+                ) {
+                    Tab(
+                        selected = activeTab == 0,
+                        onClick = { activeTab = 0 },
+                        text = { Text("Kunjungan Bulanan", fontWeight = FontWeight.Bold) }
+                    )
+                    Tab(
+                        selected = activeTab == 1,
+                        onClick = { activeTab = 1 },
+                        text = { Text("Kinerja Diri", fontWeight = FontWeight.Bold) }
                     )
                 }
-            ) {
-                Tab(
-                    selected = activeTab == 0,
-                    onClick = { activeTab = 0 },
-                    text = { Text("Kunjungan Bulanan", fontWeight = FontWeight.Bold) }
-                )
-                Tab(
-                    selected = activeTab == 1,
-                    onClick = { activeTab = 1 },
-                    text = { Text("Kinerja Diri", fontWeight = FontWeight.Bold) }
-                )
-            }
 
-            // --- Content ---
-            Box(modifier = Modifier.weight(1f)) {
-                if (activeTab == 0) {
-                    VisitsTabContent(
-                        visitsState = visitsState,
-                        visitsItems = visitsItems,
-                        onLoadMore = { viewModel.loadMoreVisits(isAdmin = false) }
-                    )
-                } else {
-                    PerformanceTabContent(performanceState = performanceState)
+                // --- Content ---
+                Box(modifier = Modifier.weight(1f)) {
+                    if (activeTab == 0) {
+                        VisitsTabContent(
+                            visitsState = visitsState,
+                            visitsItems = visitsItems,
+                            onLoadMore = { viewModel.loadMoreVisits(isAdmin = false) }
+                        )
+                    } else {
+                        PerformanceTabContent(performanceState = performanceState)
+                    }
                 }
             }
         }
@@ -180,7 +195,6 @@ fun FilterSection(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .background(Color.White)
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
@@ -406,7 +420,7 @@ fun VisitReportCard(visit: VisitItem) {
                 )
             }
 
-            Divider(color = DividerLight)
+            HorizontalDivider(color = DividerLight)
 
             // Service type and complaint
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -461,7 +475,6 @@ fun PerformanceTabContent(performanceState: ApiResult<PerformanceReportResponse>
                     Text("Data kinerja tidak ditemukan.", color = GrayText)
                 }
             } else {
-                val idrFormat = NumberFormat.getCurrencyInstance(Locale("id", "ID"))
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(16.dp),
@@ -507,7 +520,7 @@ fun PerformanceTabContent(performanceState: ApiResult<PerformanceReportResponse>
                             ) {
                                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                                     Text("Revenue Terkumpul", color = GrayText, fontSize = 12.sp)
-                                    Text(idrFormat.format(therapistPerf.totalRevenue), color = GreenPrimary, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                                    Text(FormatterUtils.formatRupiah(therapistPerf.totalRevenue), color = GreenPrimary, fontSize = 14.sp, fontWeight = FontWeight.Bold)
                                 }
                             }
                         }
