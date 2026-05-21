@@ -133,7 +133,7 @@ class AppointmentRepository(
                 android.util.Log.d("BookingRepo", "✅ Sukses ID: $bookingId")
                 ApiResult.Success(bookingId)
             } else {
-                ApiResult.Error(ErrorUtils.parseErrorMessage(response))
+                ApiResult.Error(ErrorUtils.parseErrorMessage(response), response.code())
             }
         } catch (e: Exception) {
             ApiResult.Error("Error: ${e.message}")

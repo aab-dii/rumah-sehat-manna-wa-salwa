@@ -54,6 +54,9 @@ import dagger.hilt.android.AndroidEntryPoint
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
 
+    private val pendingBookingId = mutableStateOf<String?>(null)
+    private val pendingScreen = mutableStateOf<String?>(null)
+
     private val notificationReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             val title = intent?.getStringExtra("title")
@@ -65,6 +68,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        handleIntent(intent)
 
         LocalBroadcastManager.getInstance(this).registerReceiver(
             notificationReceiver, IntentFilter("FCM_DATA_EVENT")
@@ -80,6 +84,23 @@ class MainActivity : ComponentActivity() {
         setContent {
             RumahsehatmannawasalwaTheme {
                 MainApp()
+            }
+        }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        handleIntent(intent)
+    }
+
+    private fun handleIntent(intent: Intent?) {
+        intent?.let {
+            val bookingId = it.getStringExtra("booking_id")
+            val screen = it.getStringExtra("screen") ?: it.getStringExtra("type")
+            Log.d("FCM_DEBUG", "MainActivity handleIntent: bookingId=$bookingId, screen=$screen")
+            if (!bookingId.isNullOrEmpty()) {
+                pendingBookingId.value = bookingId
+                pendingScreen.value = screen
             }
         }
     }
@@ -107,6 +128,29 @@ class MainActivity : ComponentActivity() {
         val userData by authViewModel.currentUserData.collectAsState()
         val navBackStackEntry by navController.currentBackStackEntryAsState()
         val currentRoute = navBackStackEntry?.destination?.route
+
+        // Handle pending deep-linking from FCM push notifications
+        LaunchedEffect(pendingBookingId.value, userData) {
+            val bookingId = pendingBookingId.value
+            if (bookingId != null && userData != null) {
+                val role = userData?.role ?: "pasien"
+                Log.d("FCM_DEBUG", "MainApp routing deep link: bookingId=$bookingId, role=$role")
+                try {
+                    val bid = bookingId.toInt()
+                    if (role == "admin" || role == "super_admin") {
+                        navController.navigate(Screen.AdminAppointmentDetail.createRoute(bid))
+                    } else {
+                        navController.navigate(Screen.PatientAppointmentDetail.createRoute(bid))
+                    }
+                } catch (e: NumberFormatException) {
+                    Log.e("MainActivity", "Invalid bookingId format: $bookingId", e)
+                } finally {
+                    // Reset pending state to avoid repeating navigation on config change
+                    pendingBookingId.value = null
+                    pendingScreen.value = null
+                }
+            }
+        }
 
         // Permission Launcher (Android 13+)
         val permissionLauncher = rememberLauncherForActivityResult(

@@ -35,6 +35,8 @@ import com.android.rumahsehatmannawasalwa.ui.components.snackbar.MannaSnackbarVi
 import com.android.rumahsehatmannawasalwa.ui.components.snackbar.SnackbarType
 import com.android.rumahsehatmannawasalwa.ui.navigation.Screen
 import com.android.rumahsehatmannawasalwa.ui.theme.*
+import androidx.activity.compose.BackHandler
+import androidx.compose.ui.platform.LocalContext
 import com.android.rumahsehatmannawasalwa.ui.viewmodel.booking.BookingViewModel
 import com.android.rumahsehatmannawasalwa.utils.AppConstants
 import com.android.rumahsehatmannawasalwa.utils.FormatterUtils
@@ -48,7 +50,17 @@ fun BookingSummaryScreen(navController: NavController, viewModel: BookingViewMod
     val bookingResult by viewModel.bookingState.collectAsState()
 
     val snackbarHostState = remember { SnackbarHostState() }
-    val scope = rememberCoroutineScope()
+
+    val hasConflict = (bookingResult as? ApiResult.Error)?.code == 409
+    val handleBackNavigation: () -> Unit = {
+        if (hasConflict) {
+            viewModel.handleConflictBack()
+        }
+        navController.popBackStack()
+    }
+
+    BackHandler(onBack = handleBackNavigation)
+
     var showSuccessDialog by remember { mutableStateOf(false) }
     var successBookingId by remember { mutableStateOf<Int?>(null) }
 
@@ -104,7 +116,7 @@ fun BookingSummaryScreen(navController: NavController, viewModel: BookingViewMod
         TopBar(
             title = "Rincian Janji temu",
             subtitle = "Selamat datang kembali!",
-            onBackClick = { navController.popBackStack() },
+            onBackClick = handleBackNavigation,
             transparentBackground = true,
             hideBackground = true,
         )

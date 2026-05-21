@@ -59,6 +59,8 @@ class BookingViewModel(
     private val _bookingErrorMessage = MutableStateFlow<String?>(null)
     val bookingErrorMessage: StateFlow<String?> = _bookingErrorMessage.asStateFlow()
 
+
+
     fun resetBookingError() { _bookingErrorMessage.value = null }
 
     // 2. Tambahkan bookingSummaryState (Derived State)
@@ -338,6 +340,13 @@ class BookingViewModel(
             val specs = therapist.specialization ?: emptyList()
             therapist.role == "terapis" && (specs.isEmpty() || specs.any { it.contains(service.name, ignoreCase = true) })
         }
+    }
+
+    fun handleConflictBack() {
+        _uiState.update { it.copy(selectedTimeSlot = null) }
+        fetchTimeSlots()
+        _bookingState.value = null
+        _bookingErrorMessage.value = null
     }
 
     fun resetState() {

@@ -113,7 +113,7 @@ fun PaymentDetailCard(data: BookingUiModel, viewModel: AppointmentDetailViewMode
                     color = SlateTextDark
                 )
                 Text(
-                    text = if (data.paymentMethod.lowercase() == "cash") "Tunai" else "Transfer Bank",
+                    text = if (data.paymentMethod.lowercase() == "tunai" || data.paymentMethod.lowercase() == "cash") "Tunai" else "Transfer Bank",
                     fontWeight = FontWeight.Bold,
                     color = GreenPrimary,
                     fontSize = 15.sp

@@ -2,12 +2,14 @@ package com.android.rumahsehatmannawasalwa.data.service
 
 import android.app.NotificationChannel
 import android.app.NotificationManager
+import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
+import com.android.rumahsehatmannawasalwa.MainActivity
 import com.android.rumahsehatmannawasalwa.R // Pastikan import R ini benar
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
@@ -31,7 +33,17 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
         remoteMessage.notification?.let {
             val userPreference = com.android.rumahsehatmannawasalwa.data.local.pref.UserPreference(this)
             if (userPreference.isNotificationEnabled()) {
-                showNotification(it.title ?: "Info Rumah Sehat", it.body ?: "")
+                val bookingId = remoteMessage.data["booking_id"]
+                val type = remoteMessage.data["type"] ?: remoteMessage.data["screen"]
+                
+                // Kirim notifikasi FCM ke semua admin & super admin / user terkait saat ada booking baru / update.
+                // Kegagalan pengiriman tidak mempengaruhi proses pembuatan booking.
+                showNotification(
+                    title = it.title ?: "Info Rumah Sehat",
+                    body = it.body ?: "",
+                    bookingId = bookingId,
+                    type = type
+                )
             } else {
                 Log.d("FCM_DEBUG", "Notifikasi diabaikan karena user mematikan notifikasi di pengaturan profil")
             }
@@ -64,10 +76,15 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
         }
     }
 
-    private fun showNotification(title: String, body: String) { // Ubah message jadi body agar konsisten
+    private fun showNotification(
+        title: String,
+        body: String,
+        bookingId: String? = null,
+        type: String? = null
+    ) {
         val channelId = "rumah_sehat_channel"
 
-        // FIX 1: Tambahkan casting 'as NotificationManager'
+        // Casting 'as NotificationManager'
         val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -76,19 +93,43 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
                 "Notifikasi Transaksi",
                 NotificationManager.IMPORTANCE_HIGH
             )
-            // Sekarang fungsi ini tidak akan error lagi
             notificationManager.createNotificationChannel(channel)
         }
 
+        // Intent untuk membuka MainActivity dan membawa data deep-linking
+        val intent = Intent(this, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            if (!bookingId.isNullOrEmpty()) {
+                putExtra("booking_id", bookingId)
+            }
+            if (!type.isNullOrEmpty()) {
+                putExtra("type", type)
+            }
+        }
+
+        val pendingIntentFlags = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        } else {
+            PendingIntent.FLAG_UPDATE_CURRENT
+        }
+
+        // PendingIntent untuk meluncurkan activity saat notifikasi ditap
+        val pendingIntent = PendingIntent.getActivity(
+            this,
+            Random.nextInt(),
+            intent,
+            pendingIntentFlags
+        )
+
         val notification = NotificationCompat.Builder(this, channelId)
             .setContentTitle(title)
-            .setContentText(body) // FIX 2: Gunakan variabel 'body' dari parameter
-            .setSmallIcon(R.drawable.ic_launcher_foreground) // Pastikan file ic_notification ada, atau gunakan default dulu
+            .setContentText(body)
+            .setSmallIcon(R.drawable.ic_launcher_foreground)
             .setAutoCancel(true)
+            .setContentIntent(pendingIntent)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .build()
 
-        // FIX 3: Gunakan Random.nextInt() dengan benar
         notificationManager.notify(Random.nextInt(), notification)
     }
 }

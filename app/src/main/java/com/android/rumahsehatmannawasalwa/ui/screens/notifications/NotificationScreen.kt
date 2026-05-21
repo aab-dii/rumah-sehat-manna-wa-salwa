@@ -62,6 +62,11 @@ fun NotificationScreen(
         actionMessage?.let { vm.clearActionMessage(); snackbarHostState.showSnackbar(it) }
     }
 
+    LaunchedEffect(Unit) {
+        vm.loadNotifications()
+        vm.loadUnreadCount()
+    }
+
     val scrollState = rememberScrollState()
     val isScrolled = scrollState.value > 50
 
