@@ -106,12 +106,11 @@ class AppointmentRepository(
 
     suspend fun createAppointment(params: CreateAppointment): ApiResult<Int> {
         return try {
-            // 1. Tentukan Status
-            val paymentStatus = if (params.paymentOption == "later") "unpaid" else "paid"
             val paymentMethod = params.paymentOption
-            val bookingStatus = "pending"
 
-            // 2. Rakit Body
+            // Rakit Body — KEAMANAN: Hanya kirim field yang diperlukan.
+            // Field 'price', 'total_price', 'status', 'payment_status'
+            // TIDAK dikirim karena ditentukan oleh server dari database.
             val requestMap = mutableMapOf<String, RequestBody>().apply {
                 params.patientId?.let {
                     if (it > 0) put("patient_id", createPartFromString(it.toString()))
@@ -120,10 +119,7 @@ class AppointmentRepository(
                 put("therapist_id", createPartFromString(params.therapistId.toString()))
                 put("booking_date", createPartFromString(params.date))
                 put("booking_time", createPartFromString(params.time))
-                put("total_price", createPartFromString(params.price.toString()))
                 put("location_type", createPartFromString(AppConstants.DEFAULT_LOCATION_TYPE))
-                put("status", createPartFromString(bookingStatus))
-                put("payment_status", createPartFromString(paymentStatus))
                 put("payment_method", createPartFromString(paymentMethod))
             }
             val imagePart = params.proofUri?.let { prepareMultipartImage(it, "proof_of_transfer") }
