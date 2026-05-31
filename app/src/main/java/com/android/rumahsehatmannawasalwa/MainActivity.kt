@@ -139,6 +139,8 @@ class MainActivity : ComponentActivity() {
                     val bid = bookingId.toInt()
                     if (role == "admin" || role == "super_admin") {
                         navController.navigate(Screen.AdminAppointmentDetail.createRoute(bid))
+                    } else if (role == "terapis" || role == "therapist") {
+                        navController.navigate(Screen.TherapistAppointmentDetail.createRoute(bid))
                     } else {
                         navController.navigate(Screen.PatientAppointmentDetail.createRoute(bid))
                     }

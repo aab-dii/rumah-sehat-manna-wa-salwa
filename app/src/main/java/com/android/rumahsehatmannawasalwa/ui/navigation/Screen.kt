@@ -83,6 +83,10 @@ sealed class Screen (val route: String) {
     object TherapistPatientList : Screen("therapist_patient_list") // Daftar Pasien (akses riwayat terapi)
     object TherapistHistory : Screen("therapist_history") // Riwayat Terapi
     object TherapistSchedule : Screen("therapist_schedule") // Kelola Jadwal (Availability)
+    object TherapistAppointmentDetail : Screen("therapist_appointment_detail/{bookingId}") {
+        val arguments = listOf(navArgument("bookingId") { type = NavType.IntType })
+        fun createRoute(id: Int) = "therapist_appointment_detail/$id"
+    }
     object TherapyRecordForm : Screen("therapy_record_form/{bookingId}?record_id={recordId}") {
         val arguments = listOf(
             navArgument("bookingId") { type = NavType.IntType },

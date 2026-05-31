@@ -152,7 +152,7 @@ fun TherapistHomeScreen(
                                 AgendaCard(
                                     item          = item,
                                     onDetailClick = {
-                                        navController.navigate(Screen.PatientAppointmentDetail.createRoute(item.id))
+                                        navController.navigate(Screen.TherapistAppointmentDetail.createRoute(item.id))
                                     }
                                 )
                                 Spacer(Modifier.height(10.dp))

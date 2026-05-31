@@ -189,23 +189,25 @@ fun TherapyRecordFormScreen(
                                                 imageUrl = service?.imageUrl
                                             )
                                             
-                                            HorizontalDivider(color = DividerLight, modifier = Modifier.padding(vertical = 12.dp))
-                                            
                                             // Therapist Row
-                                            PersonRow(
-                                                name = therapist?.name ?: "-",
-                                                subtitle = "Terapis",
-                                                imageUrl = FormatterUtils.getFullImageUrl(therapist?.profilePhotoUrl ?: therapist?.profilePhotoPath)
-                                            )
-                                            
-                                            HorizontalDivider(color = DividerLight, modifier = Modifier.padding(vertical = 12.dp))
+                                            if (therapist != null) {
+                                                HorizontalDivider(color = DividerLight, modifier = Modifier.padding(vertical = 12.dp))
+                                                PersonRow(
+                                                    name = therapist.name,
+                                                    subtitle = "Terapis",
+                                                    imageUrl = FormatterUtils.getFullImageUrl(therapist.profilePhotoUrl ?: therapist.profilePhotoPath)
+                                                )
+                                            }
                                             
                                             // Patient Row
-                                            PersonRow(
-                                                name = patient?.name ?: "-",
-                                                subtitle = "Pasien",
-                                                imageUrl = FormatterUtils.getFullImageUrl(patient?.profilePhotoUrl ?: patient?.profilePhotoPath)
-                                            )
+                                            if (patient != null) {
+                                                HorizontalDivider(color = DividerLight, modifier = Modifier.padding(vertical = 12.dp))
+                                                PersonRow(
+                                                    name = patient.name,
+                                                    subtitle = "Pasien",
+                                                    imageUrl = FormatterUtils.getFullImageUrl(patient.profilePhotoUrl ?: patient.profilePhotoPath)
+                                                )
+                                            }
                                         }
                                     }
                                 }

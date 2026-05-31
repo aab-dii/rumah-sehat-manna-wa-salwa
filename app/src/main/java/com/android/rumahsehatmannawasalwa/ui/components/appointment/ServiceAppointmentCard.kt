@@ -75,23 +75,27 @@ fun ServiceCard(
             HorizontalDivider(color = DividerLight, thickness = 1.dp)
 
             // 2. INFO TERAPIS
-            PersonnelRowContent(
-                label = "Terapis",
-                name = data.therapist?.name ?: "-",
-                photo = data.therapist?.profilePhotoPath ?: data.therapist?.fotoUrl,
-                phoneNumber = data.therapist?.phoneNumber
-            )
+            if (data.therapist != null) {
+                PersonnelRowContent(
+                    label = "Terapis",
+                    name = data.therapist.name,
+                    photo = data.therapist.profilePhotoPath ?: data.therapist.fotoUrl,
+                    phoneNumber = data.therapist.phoneNumber
+                )
+            }
 
-            if (showPatient) {
-                HorizontalDivider(color = DividerLight, thickness = 1.dp)
+            if (showPatient && data.patient != null) {
+                if (data.therapist != null) {
+                    HorizontalDivider(color = DividerLight, thickness = 1.dp)
+                }
                 
                 // 3. INFO PASIEN
                 PersonnelRowContent(
                     label = "Pasien",
-                    name = data.patient?.name ?: "-",
-                    photo = data.patient?.profilePhotoPath ?: data.patient?.fotoUrl,
-                    phoneNumber = data.patient?.phoneNumber,
-                    onClick = { navController.navigate("admin_user_detail/${data.patient?.id}") }
+                    name = data.patient.name,
+                    photo = data.patient.profilePhotoPath ?: data.patient.fotoUrl,
+                    phoneNumber = data.patient.phoneNumber,
+                    onClick = { navController.navigate("admin_user_detail/${data.patient.id}") }
                 )
             }
         }

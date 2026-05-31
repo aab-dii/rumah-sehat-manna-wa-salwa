@@ -330,27 +330,55 @@ fun ConsolidatedServiceTherapistCard(data: BookingUiModel) {
                 }
             }
             
-            HorizontalDivider(color = DividerLight, thickness = 1.dp)
+            if (data.therapist != null) {
+                HorizontalDivider(color = DividerLight, thickness = 1.dp)
 
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(
-                    modifier = Modifier
-                        .size(56.dp)
-                        .clip(CircleShape)
-                        .background(SurfaceGrey),
-                    contentAlignment = Alignment.Center
-                ) {
-                    AsyncImage(
-                        model = data.therapist?.profilePhotoPath ?: data.therapist?.fotoUrl,
-                        contentDescription = null,
-                        modifier = Modifier.fillMaxSize(),
-                        contentScale = ContentScale.Crop
-                    )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        modifier = Modifier
+                            .size(56.dp)
+                            .clip(CircleShape)
+                            .background(SurfaceGrey),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        AsyncImage(
+                            model = data.therapist.profilePhotoPath ?: data.therapist.fotoUrl,
+                            contentDescription = null,
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Crop
+                        )
+                    }
+                    Spacer(Modifier.width(16.dp))
+                    Column {
+                        Text(data.therapist.name, fontWeight = FontWeight.Bold, color = SlateTextDark, fontSize = 15.sp)
+                        Text("Terapis", fontSize = 13.sp, color = BodyGray)
+                    }
                 }
-                Spacer(Modifier.width(16.dp))
-                Column {
-                    Text(data.therapist?.name ?: "Terapis", fontWeight = FontWeight.Bold, color = SlateTextDark, fontSize = 15.sp)
-                    Text("Terapis", fontSize = 13.sp, color = BodyGray)
+            }
+
+            if (data.patient != null) {
+                HorizontalDivider(color = DividerLight, thickness = 1.dp)
+
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        modifier = Modifier
+                            .size(56.dp)
+                            .clip(CircleShape)
+                            .background(SurfaceGrey),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        AsyncImage(
+                            model = data.patient.profilePhotoPath ?: data.patient.fotoUrl,
+                            contentDescription = null,
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Crop
+                        )
+                    }
+                    Spacer(Modifier.width(16.dp))
+                    Column {
+                        Text(data.patient.name, fontWeight = FontWeight.Bold, color = SlateTextDark, fontSize = 15.sp)
+                        Text("Pasien", fontSize = 13.sp, color = BodyGray)
+                    }
                 }
             }
         }

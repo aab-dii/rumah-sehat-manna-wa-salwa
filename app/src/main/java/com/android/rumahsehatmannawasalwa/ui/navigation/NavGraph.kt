@@ -48,6 +48,7 @@ import com.android.rumahsehatmannawasalwa.ui.screens.patient.record.PatientThera
 import com.android.rumahsehatmannawasalwa.ui.screens.profile.CompleteProfileScreen
 import com.android.rumahsehatmannawasalwa.ui.screens.splash.SplashScreen
 import com.android.rumahsehatmannawasalwa.ui.screens.therapist.appointment.TherapistAppointmentScreen
+import com.android.rumahsehatmannawasalwa.ui.screens.therapist.appointment.TherapistAppointmentDetailScreen
 import com.android.rumahsehatmannawasalwa.ui.screens.therapist.home.TherapistHomeScreen
 import com.android.rumahsehatmannawasalwa.ui.screens.therapist.record.TherapyRecordDetailScreen
 import com.android.rumahsehatmannawasalwa.ui.screens.therapist.record.TherapyRecordFormScreen
@@ -113,6 +114,8 @@ fun AppNavGraph(
                 onNotificationClick = { bid ->
                     if (role == "admin" || role == "super_admin") {
                         navController.navigate(Screen.AdminAppointmentDetail.createRoute(bid))
+                    } else if (role == "terapis" || role == "therapist") {
+                        navController.navigate(Screen.TherapistAppointmentDetail.createRoute(bid))
                     } else {
                         navController.navigate(Screen.PatientAppointmentDetail.createRoute(bid))
                     }
@@ -202,6 +205,14 @@ fun AppNavGraph(
 
         composable(Screen.TherapistAppointment.route) {
             TherapistAppointmentScreen(navController, adminBookingViewModel)
+        }
+
+        composable(
+            route = Screen.TherapistAppointmentDetail.route,
+            arguments = listOf(navArgument("bookingId") { type = NavType.IntType })
+        ) { backStackEntry ->
+            val id = backStackEntry.arguments?.getInt("bookingId") ?: 0
+            TherapistAppointmentDetailScreen(navController, id, appointmentDetailViewModel)
         }
 
         composable(Screen.TherapistPatientList.route) {

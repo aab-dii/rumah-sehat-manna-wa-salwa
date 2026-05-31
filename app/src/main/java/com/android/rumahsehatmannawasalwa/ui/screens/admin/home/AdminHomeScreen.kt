@@ -443,15 +443,6 @@ fun AdminQuickActionsCard(
                     color = GreenPrimary,
                     onClick = { navController.navigate(Screen.AdminReport.route) }
                 )
-                // Sprint 2.1: Tombol Kelola Admin hanya muncul untuk super_admin
-                if (currentUserRole == "super_admin") {
-                    AdminQuickActionItem(
-                        icon = Icons.Default.AdminPanelSettings,
-                        label = "Admin",
-                        color = AccentOrange,
-                        onClick = { navController.navigate(Screen.SuperAdminManageAdmins.route) }
-                    )
-                }
             }
         }
     }

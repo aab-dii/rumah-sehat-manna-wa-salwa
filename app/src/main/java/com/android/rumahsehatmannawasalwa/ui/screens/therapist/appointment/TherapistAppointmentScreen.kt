@@ -165,7 +165,7 @@ fun TherapistAppointmentScreen(
                             personLabel1 = "${ui.patient?.name ?: "-"} (Pasien)",
                             personLabel2 = null,
                             onClick = {
-                                 ui.appointment?.let { navController.navigate(Screen.PatientAppointmentDetail.createRoute(it.id)) }
+                                 ui.appointment?.let { navController.navigate(Screen.TherapistAppointmentDetail.createRoute(it.id)) }
                             },
                             actions = if (!isHistory) {
                                 {

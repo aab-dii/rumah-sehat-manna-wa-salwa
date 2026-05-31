@@ -48,29 +48,6 @@ fun TherapyRecordDetailScreen(
     }
 
     Scaffold(
-        floatingActionButton = {
-            if (detailResult is ApiResult.Success) {
-                val record = (detailResult as ApiResult.Success).data
-                // Cek apakah catatan sudah dikunci (Status Completed)
-                val isLocked = record.booking?.status == "completed"
-                
-                if (!isLocked) {
-                    FloatingActionButton(
-                        onClick = {
-                            navController.navigate("therapy_record_form/${record.booking?.id}?record_id=${record.id}")
-                        },
-                        containerColor = GreenPrimary,
-                        contentColor = Color.White,
-                        shape = CircleShape
-                    ) {
-                        Icon(
-                            imageVector = androidx.compose.material.icons.Icons.Default.Edit,
-                            contentDescription = "Edit Catatan"
-                        )
-                    }
-                }
-            }
-        }
     ) { padding ->
         Column(
             modifier = Modifier
@@ -120,34 +97,7 @@ fun TherapyRecordDetailScreen(
                             }
                             is ApiResult.Success -> {
                                 val record = result.data
-                                // Tampilkan Banner Kunci jika sudah completed
-                                if (record.booking?.status == "completed") {
-                                    Surface(
-                                        modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 10.dp),
-                                        color = Color(0xFFFFF4F4),
-                                        shape = RoundedCornerShape(12.dp),
-                                        border = BorderStroke(1.dp, Color(0xFFFFCCCC))
-                                    ) {
-                                        Row(
-                                            modifier = Modifier.padding(12.dp),
-                                            verticalAlignment = Alignment.CenterVertically
-                                        ) {
-                                            Icon(
-                                                imageVector = androidx.compose.material.icons.Icons.Default.Lock,
-                                                contentDescription = null,
-                                                tint = Color(0xFFCC0000),
-                                                modifier = Modifier.size(20.dp)
-                                            )
-                                            Spacer(Modifier.width(8.dp))
-                                            Text(
-                                                "Catatan Terapi Terkunci (Sesi Selesai)",
-                                                color = Color(0xFFCC0000),
-                                                fontSize = 13.sp,
-                                                fontWeight = FontWeight.Bold
-                                            )
-                                        }
-                                    }
-                                }
+
                                 RecordDetailContent(record = record)
                             }
                             is ApiResult.Error -> {
