@@ -111,6 +111,11 @@ class AuthViewModel(
             return
         }
 
+        if (pass.length > 64) {
+            _authState.value = ApiResult.Error("Password maksimal 64 karakter")
+            return
+        }
+
         if (pass != confirmPass) {
             _authState.value = ApiResult.Error("Konfirmasi password tidak cocok")
             return
@@ -214,6 +219,14 @@ class AuthViewModel(
     }
 
     fun changePassword(oldPass: String, newPass: String) {
+        if (newPass.length < 8) {
+            _changePasswordState.value = ApiResult.Error("Password baru minimal 8 karakter")
+            return
+        }
+        if (newPass.length > 64) {
+            _changePasswordState.value = ApiResult.Error("Password baru maksimal 64 karakter")
+            return
+        }
         viewModelScope.launch {
             _changePasswordState.value = ApiResult.Loading
             val result = repository.changePassword(oldPass, newPass)

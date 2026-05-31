@@ -36,6 +36,8 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import android.app.Activity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -49,17 +51,22 @@ import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.android.gms.common.api.ApiException
 import kotlinx.coroutines.launch
 
-
 @Composable
 fun LoginScreen(navController: NavController, viewModel: AuthViewModel) {
+    val emailFocusRequester = remember { FocusRequester() }
+    val passwordFocusRequester = remember { FocusRequester() }
+
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
+    var emailError by remember { mutableStateOf<String?>(null) }
+    var passwordError by remember { mutableStateOf<String?>(null) }
     var passwordVisible by remember { mutableStateOf(false) }
     var showForgotPasswordDialog by remember { mutableStateOf(false) }
     var forgotPasswordEmail by remember { mutableStateOf("") }
 
     val authStateState = viewModel.authState.collectAsState()
     val authState = authStateState.value
+    val isLoading = authState is ApiResult.Loading
     val context = LocalContext.current
 
     val snackbarHostState = remember { SnackbarHostState() }
@@ -128,6 +135,19 @@ fun LoginScreen(navController: NavController, viewModel: AuthViewModel) {
             is ApiResult.Error -> {
                 val errorMsg = (authState as ApiResult.Error).error
                 Log.e("LoginScreen", "Login State: Error -> $errorMsg")
+                
+                if (errorMsg.contains("email", ignoreCase = true) || errorMsg.contains("tidak terdaftar", ignoreCase = true)) {
+                    emailError = errorMsg
+                    emailFocusRequester.requestFocus()
+                } else if (errorMsg.contains("password", ignoreCase = true) || errorMsg.contains("salah", ignoreCase = true) || errorMsg.contains("credentials", ignoreCase = true)) {
+                    passwordError = errorMsg
+                    passwordFocusRequester.requestFocus()
+                } else {
+                    emailError = errorMsg
+                    passwordError = errorMsg
+                    emailFocusRequester.requestFocus()
+                }
+                
                 scope.launch {
                     snackbarHostState.showSnackbar(
                         MannaSnackbarVisuals(
@@ -178,10 +198,16 @@ fun LoginScreen(navController: NavController, viewModel: AuthViewModel) {
             MannaTextField(
                 label = "Email",
                 value = email,
-                onValueChange = { email = it },
+                onValueChange = { 
+                    email = it 
+                    if (emailError != null) emailError = null
+                },
                 placeholder = "nama@email.com",
                 leadingIcon = Icons.Default.Email,
-                isError = authState is ApiResult.Error && (authState as ApiResult.Error).error.contains("Email", ignoreCase = true)
+                enabled = !isLoading,
+                isError = emailError != null,
+                errorMessage = emailError,
+                focusRequester = emailFocusRequester
             )
 
             Spacer(modifier = Modifier.height(20.dp))
@@ -190,16 +216,25 @@ fun LoginScreen(navController: NavController, viewModel: AuthViewModel) {
             MannaTextField(
                 label = "Password",
                 value = password,
-                onValueChange = { password = it },
+                onValueChange = { 
+                    password = it 
+                    if (passwordError != null) passwordError = null
+                },
                 placeholder = "••••••••",
                 leadingIcon = Icons.Default.Lock,
-                isError = authState is ApiResult.Error && (authState as ApiResult.Error).error.contains("Password", ignoreCase = true),
+                enabled = !isLoading,
+                isError = passwordError != null,
+                errorMessage = passwordError,
+                supportingText = "Maksimal 64 karakter",
+                maxLength = 64,
                 trailingIcon = {
                     val image = if (passwordVisible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff
                     IconButton(
                         onClick = {
                             passwordVisible = !passwordVisible
-                        }) {
+                        },
+                        enabled = !isLoading
+                    ) {
                         Icon(
                             imageVector = image,
                             contentDescription = null,
@@ -207,7 +242,8 @@ fun LoginScreen(navController: NavController, viewModel: AuthViewModel) {
                         )
                     }
                 },
-                visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation()
+                visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                focusRequester = passwordFocusRequester
             )
 
             // Lupa Password
@@ -215,8 +251,9 @@ fun LoginScreen(navController: NavController, viewModel: AuthViewModel) {
                 modifier = Modifier.fillMaxWidth(),
                 contentAlignment = Alignment.CenterEnd) {
                 TextButton(
-                    onClick = { showForgotPasswordDialog = true
-                    }) {
+                    onClick = { showForgotPasswordDialog = true },
+                    enabled = !isLoading
+                ) {
                     Text(
                        text = "Lupa Password?",
                         style = MaterialTheme.typography.labelLarge.copy(
@@ -232,8 +269,37 @@ fun LoginScreen(navController: NavController, viewModel: AuthViewModel) {
             // Tombol Masuk
             MannaButton(
                 text = "Masuk",
-                onClick = { viewModel.login(email, password) },
-                isLoading = authState is ApiResult.Loading
+                onClick = {
+                    var isValid = true
+                    var firstInvalidRequester: FocusRequester? = null
+
+                    if (email.isBlank()) {
+                        emailError = "Email wajib diisi"
+                        if (firstInvalidRequester == null) firstInvalidRequester = emailFocusRequester
+                    } else if (!android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
+                        emailError = "Format email tidak valid"
+                        if (firstInvalidRequester == null) firstInvalidRequester = emailFocusRequester
+                    }
+
+                    if (password.isBlank()) {
+                        passwordError = "Password wajib diisi"
+                        if (firstInvalidRequester == null) firstInvalidRequester = passwordFocusRequester
+                    } else if (password.length > 64) {
+                        passwordError = "Password maksimal 64 karakter"
+                        if (firstInvalidRequester == null) firstInvalidRequester = passwordFocusRequester
+                    }
+
+                    if (firstInvalidRequester != null) {
+                        isValid = false
+                        firstInvalidRequester.requestFocus()
+                    }
+
+                    if (isValid) {
+                        viewModel.login(email, password)
+                    }
+                },
+                isLoading = isLoading,
+                enabled = !isLoading
             )
 
             Spacer(modifier = Modifier.height(12.dp))
@@ -262,6 +328,7 @@ fun LoginScreen(navController: NavController, viewModel: AuthViewModel) {
                         googleLauncher.launch(signInIntent)
                     }
                 },
+                enabled = !isLoading,
                 borderColor = GreenLight,
                 contentColor = SlateTextDark,
                 icon = {
@@ -286,7 +353,7 @@ fun LoginScreen(navController: NavController, viewModel: AuthViewModel) {
                             fontWeight = androidx.compose.ui.text.font.FontWeight.Bold, 
                             color = GreenPrimary
                         ),
-                        modifier = Modifier.clickable { navController.navigate("register") }
+                        modifier = if (isLoading) Modifier else Modifier.clickable { navController.navigate("register") }
                     )
                 }
             }
@@ -295,7 +362,7 @@ fun LoginScreen(navController: NavController, viewModel: AuthViewModel) {
     
     if (showForgotPasswordDialog) {
         androidx.compose.ui.window.Dialog(onDismissRequest = {
-            showForgotPasswordDialog = false
+            if (!isLoading) showForgotPasswordDialog = false
         }) {
             Surface(
                 shape = MaterialTheme.shapes.medium,
@@ -323,7 +390,8 @@ fun LoginScreen(navController: NavController, viewModel: AuthViewModel) {
                         value = forgotPasswordEmail,
                         onValueChange = { forgotPasswordEmail = it },
                         placeholder = "nama@email.com",
-                        leadingIcon = Icons.Default.Email
+                        leadingIcon = Icons.Default.Email,
+                        enabled = !isLoading
                     )
                     
                     Spacer(modifier = Modifier.height(32.dp))
@@ -335,6 +403,7 @@ fun LoginScreen(navController: NavController, viewModel: AuthViewModel) {
                         OutlinedButton(
                             onClick = { showForgotPasswordDialog = false },
                             modifier = Modifier.weight(1f),
+                            enabled = !isLoading,
                             shape = RoundedCornerShape(25.dp),
                             border = BorderStroke(1.dp, DividerLight)
                         ) {
@@ -350,7 +419,8 @@ fun LoginScreen(navController: NavController, viewModel: AuthViewModel) {
                                 }
                             },
                             modifier = Modifier.weight(1f),
-                            isLoading = authState is ApiResult.Loading
+                            isLoading = isLoading,
+                            enabled = !isLoading
                         )
                     }
                  }

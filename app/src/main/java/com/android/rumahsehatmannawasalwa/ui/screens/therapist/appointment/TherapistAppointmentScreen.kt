@@ -39,6 +39,11 @@ import com.android.rumahsehatmannawasalwa.ui.theme.GreenPrimary
 import com.android.rumahsehatmannawasalwa.ui.theme.TextPrimary
 import com.android.rumahsehatmannawasalwa.ui.viewmodel.booking.AdminBookingViewModel
 import com.android.rumahsehatmannawasalwa.utils.FormatterUtils.formatDateHuman
+import com.android.rumahsehatmannawasalwa.ui.components.ActionOverlay
+import com.android.rumahsehatmannawasalwa.ui.components.snackbar.MannaSnackbar
+import com.android.rumahsehatmannawasalwa.ui.components.snackbar.MannaSnackbarVisuals
+import com.android.rumahsehatmannawasalwa.ui.components.snackbar.SnackbarType
+import com.android.rumahsehatmannawasalwa.data.ApiResult
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -53,11 +58,43 @@ fun TherapistAppointmentScreen(
     val upcomingChipSelected by viewModel.upcomingChipFilter.collectAsState()
     val historyChipSelected by viewModel.historyChipFilter.collectAsState()
 
+    val uiState by viewModel.uiState.collectAsState()
+    val operationState by viewModel.operationState.collectAsState()
+
+    val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
+
     val pagerState = rememberPagerState(pageCount = { 2 })
     val coroutineScope = rememberCoroutineScope()
 
     var showStartConfirmDialog by remember { mutableStateOf(false) }
     var bookingToStart by remember { mutableStateOf<Int?>(null) }
+
+    LaunchedEffect(operationState) {
+        operationState?.let { result ->
+            when (result) {
+                is ApiResult.Success -> {
+                    snackbarHostState.showSnackbar(
+                        MannaSnackbarVisuals(
+                            message = result.data,
+                            type = SnackbarType.SUCCESS
+                        )
+                    )
+                    viewModel.resetState()
+                }
+                is ApiResult.Error -> {
+                    snackbarHostState.showSnackbar(
+                        MannaSnackbarVisuals(
+                            message = result.error,
+                            type = SnackbarType.ERROR
+                        )
+                    )
+                    viewModel.resetState()
+                }
+                else -> {}
+            }
+        }
+    }
 
     LaunchedEffect(Unit) {
         viewModel.isUserAdmin = false
@@ -178,6 +215,19 @@ fun TherapistAppointmentScreen(
                         CircularProgressIndicator(color = GreenPrimary)
                     }
                 }
+            }
+
+            SnackbarHost(
+                hostState = snackbarHostState,
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(bottom = 16.dp)
+            ) { data ->
+                MannaSnackbar(snackbarData = data)
+            }
+
+            if (uiState.isLoading) {
+                ActionOverlay()
             }
         }
 

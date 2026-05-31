@@ -58,6 +58,7 @@ fun MannaOutlinedButton(
     modifier: Modifier = Modifier,
     borderColor: Color = GreenLight,
     contentColor: Color = SlateTextDark,
+    enabled: Boolean = true,
     icon: @Composable (() -> Unit)? = null
 ) {
     OutlinedButton(
@@ -65,6 +66,7 @@ fun MannaOutlinedButton(
         modifier = modifier
             .fillMaxWidth()
             .height(56.dp),
+        enabled = enabled,
         shape = RoundedCornerShape(28.dp),
         border = BorderStroke(1.dp, borderColor),
         colors = ButtonDefaults.outlinedButtonColors(

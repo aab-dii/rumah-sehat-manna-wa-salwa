@@ -298,6 +298,10 @@ fun TherapyRecordFormScreen(
                 }
             }
         }
+
+        if (isLoading) {
+            com.android.rumahsehatmannawasalwa.ui.components.ActionOverlay()
+        }
     }
 }
 

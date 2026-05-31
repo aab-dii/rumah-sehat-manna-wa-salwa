@@ -36,6 +36,9 @@ import com.android.rumahsehatmannawasalwa.ui.theme.*
 import com.android.rumahsehatmannawasalwa.ui.viewmodel.auth.AuthViewModel
 import java.util.*
 
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+
 // 1. Data Class untuk menampung input
 data class UserProfile(
     val name: String = "",
@@ -60,6 +63,8 @@ fun CompleteProfileScreen(
 
     var hasInitiatedSave by remember { mutableStateOf(false) }
 
+
+    val isLoading = authState is ApiResult.Loading
 
     LaunchedEffect(authState, hasInitiatedSave) {
         if (hasInitiatedSave) {
@@ -91,24 +96,30 @@ fun CompleteProfileScreen(
         }
     }
 
-    CompleteProfileContent(
-        user = user,
-        isLoading = authState is ApiResult.Loading,
-        isFromAuth = isFromAuth,
-        onSaveClick = { profile ->
-            hasInitiatedSave = true
-            viewModel.updateUserProfile(
-                name = profile.name,
-                phone = profile.phoneNumber,
-                job = profile.job,
-                address = profile.address,
-                birthDate = profile.birthDate,
-                gender = profile.gender,
-                fotoUrl = user?.fotoUrl // Sertakan foto URL yang sudah ada
-            )
-        },
-        onBackClick = { navController.popBackStack() }
-    )
+    Box(modifier = Modifier.fillMaxSize()) {
+        CompleteProfileContent(
+            user = user,
+            isLoading = isLoading,
+            isFromAuth = isFromAuth,
+            onSaveClick = { profile ->
+                hasInitiatedSave = true
+                viewModel.updateUserProfile(
+                    name = profile.name,
+                    phone = profile.phoneNumber,
+                    job = profile.job,
+                    address = profile.address,
+                    birthDate = profile.birthDate,
+                    gender = profile.gender,
+                    fotoUrl = user?.fotoUrl // Sertakan foto URL yang sudah ada
+                )
+            },
+            onBackClick = { if (!isLoading) navController.popBackStack() }
+        )
+
+        if (isLoading) {
+            com.android.rumahsehatmannawasalwa.ui.components.ActionOverlay()
+        }
+    }
 }
 
 @Composable
@@ -119,6 +130,11 @@ fun CompleteProfileContent(
     onSaveClick: (UserProfile) -> Unit,
     onBackClick: () -> Unit
 ) {
+    val nameFocusRequester = remember { FocusRequester() }
+    val phoneFocusRequester = remember { FocusRequester() }
+    val addressFocusRequester = remember { FocusRequester() }
+    val jobFocusRequester = remember { FocusRequester() }
+
     var name by remember(user) { mutableStateOf(user?.name ?: "") }
     var phoneNumber by remember(user) { mutableStateOf(user?.phoneNumber ?: "") }
     var address by remember(user) { mutableStateOf(user?.address ?: "") }
@@ -195,21 +211,26 @@ fun CompleteProfileContent(
                         placeholder = "Masukkan nama lengkap",
                         leadingIcon = Icons.Outlined.Person,
                         isError = nameError != null,
-                        errorMessage = nameError
+                        errorMessage = nameError,
+                        focusRequester = nameFocusRequester
                     )
                     Spacer(modifier = Modifier.height(16.dp))
 
                     MannaTextField(
                         value = phoneNumber,
-                        onValueChange = { 
-                            phoneNumber = it 
-                            if (phoneError != null) phoneError = null
+                        onValueChange = { input ->
+                            if (input.all { it.isDigit() }) {
+                                phoneNumber = input
+                                if (phoneError != null) phoneError = null
+                            }
                         },
                         label = "Nomor WhatsApp",
                         placeholder = "Contoh: 08123456789",
                         leadingIcon = Icons.Default.Phone,
                         isError = phoneError != null,
-                        errorMessage = phoneError
+                        errorMessage = phoneError,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        focusRequester = phoneFocusRequester
                     )
                     Spacer(modifier = Modifier.height(16.dp))
 
@@ -234,7 +255,8 @@ fun CompleteProfileContent(
                         placeholder = "Masukkan alamat",
                         leadingIcon = Icons.Default.LocationOn,
                         isError = addressError != null,
-                        errorMessage = addressError
+                        errorMessage = addressError,
+                        focusRequester = addressFocusRequester
                     )
                     Spacer(modifier = Modifier.height(16.dp))
 
@@ -269,7 +291,8 @@ fun CompleteProfileContent(
                         placeholder = "Masukkan pekerjaan",
                         leadingIcon = Icons.Outlined.Work,
                         isError = jobError != null,
-                        errorMessage = jobError
+                        errorMessage = jobError,
+                        focusRequester = jobFocusRequester
                     )
                     Spacer(modifier = Modifier.height(24.dp))
 
@@ -317,38 +340,42 @@ fun CompleteProfileContent(
                         text = if (isFromAuth) "Simpan Data" else "Simpan Perubahan",
                         onClick = {
                             var isValid = true
+                            var firstInvalidRequester: FocusRequester? = null
                             
                             if (name.isBlank()) {
                                 nameError = "Nama lengkap wajib diisi"
-                                isValid = false
+                                if (firstInvalidRequester == null) firstInvalidRequester = nameFocusRequester
                             }
                             
                             if (phoneNumber.isBlank()) {
                                 phoneError = "Nomor WhatsApp wajib diisi"
-                                isValid = false
+                                if (firstInvalidRequester == null) firstInvalidRequester = phoneFocusRequester
                             } else if (!phoneNumber.all { it.isDigit() }) {
                                 phoneError = "Nomor WhatsApp harus berupa angka"
-                                isValid = false
+                                if (firstInvalidRequester == null) firstInvalidRequester = phoneFocusRequester
                             }
                             
                             if (address.isBlank()) {
                                 addressError = "Alamat wajib diisi"
-                                isValid = false
+                                if (firstInvalidRequester == null) firstInvalidRequester = addressFocusRequester
                             }
                             
                             if (birthDate.isBlank()) {
                                 birthDateError = "Tanggal lahir wajib dipilih"
-                                isValid = false
                             }
                             
                             if (job.isBlank()) {
                                 jobError = "Pekerjaan wajib diisi"
-                                isValid = false
+                                if (firstInvalidRequester == null) firstInvalidRequester = jobFocusRequester
                             }
                             
                             if (gender.isBlank()) {
                                 genderError = "Jenis kelamin wajib dipilih"
+                            }
+
+                            if (firstInvalidRequester != null) {
                                 isValid = false
+                                firstInvalidRequester.requestFocus()
                             }
 
                             if (isValid) {

@@ -188,6 +188,10 @@ fun AdminFormServiceScreen(
                 isScrolled = scrollState.value > 100,
                 onBackClick = { navController.popBackStack() }
             )
+
+            if (isLoading) {
+                com.android.rumahsehatmannawasalwa.ui.components.ActionOverlay()
+            }
         }
     }
 

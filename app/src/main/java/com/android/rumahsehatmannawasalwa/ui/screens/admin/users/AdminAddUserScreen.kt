@@ -200,9 +200,13 @@ fun AdminAddUserScreen(
                             MannaTextField(
                                 label = "Nomor WhatsApp",
                                 value = phone,
-                                onValueChange = { phone = it },
+                                onValueChange = { input ->
+                                    if (input.all { it.isDigit() }) {
+                                        phone = input
+                                    }
+                                },
                                 placeholder = "Contoh: 08123456789",
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                                 leadingIcon = Icons.Default.Phone
                             )
 
@@ -374,14 +378,7 @@ fun AdminAddUserScreen(
 
         // Loading overlay
         if (actionState is ApiResult.Loading) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(Color.Black.copy(alpha = 0.3f)),
-                contentAlignment = Alignment.Center
-            ) {
-                CircularProgressIndicator(color = GreenPrimary)
-            }
+            com.android.rumahsehatmannawasalwa.ui.components.ActionOverlay()
         }
 
         // SnackbarHost di dalam Box root agar align ke BottomCenter bisa bekerja

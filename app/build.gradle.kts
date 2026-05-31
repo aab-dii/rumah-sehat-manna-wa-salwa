@@ -26,7 +26,7 @@ android {
 //        buildConfigField("String", "BASE_URL", "\"http://192.168.110.195:8000/api/\"")
 //        buildConfigField("String", "BASE_URL", "\"http://10.99.171.192:8000/api/\"")
 //        buildConfigField("String", "BASE_URL", "\"http://10.10.202.138:8000/api/\"")
-//        buildConfigField("String", "BASE_URL", "\"http://10.233.25.192:8000/api/\"")
+//        buildConfigField("String", "BASE_URL", "\"http://10.10.201.75:8000/api/\"")
     }
 
     buildTypes {

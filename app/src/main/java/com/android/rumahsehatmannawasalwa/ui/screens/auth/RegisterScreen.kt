@@ -33,6 +33,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.navigation.NavController
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
@@ -42,6 +45,15 @@ import java.util.Calendar
 
 @Composable
 fun RegisterScreen(navController: NavController, viewModel: AuthViewModel) {
+    // --- Focus Requesters ---
+    val nameFocusRequester = remember { FocusRequester() }
+    val phoneFocusRequester = remember { FocusRequester() }
+    val emailFocusRequester = remember { FocusRequester() }
+    val passwordFocusRequester = remember { FocusRequester() }
+    val confirmPasswordFocusRequester = remember { FocusRequester() }
+    val addressFocusRequester = remember { FocusRequester() }
+    val jobFocusRequester = remember { FocusRequester() }
+
     // --- State Variables ---
     var name by remember { mutableStateOf("") }
     var phone by remember { mutableStateOf("") }
@@ -68,6 +80,7 @@ fun RegisterScreen(navController: NavController, viewModel: AuthViewModel) {
 
     val authStateState = viewModel.authState.collectAsState()
     val authState = authStateState.value
+    val isLoading = authState is ApiResult.Loading
     val context = LocalContext.current
     
     val snackbarHostState = remember { SnackbarHostState() }
@@ -193,8 +206,10 @@ fun RegisterScreen(navController: NavController, viewModel: AuthViewModel) {
                 },
                 placeholder = "Nama Lengkap",
                 leadingIcon = Icons.Default.AccountCircle,
+                enabled = !isLoading,
                 isError = nameError != null,
-                errorMessage = nameError
+                errorMessage = nameError,
+                focusRequester = nameFocusRequester
             )
 
             Spacer(modifier = Modifier.height(20.dp))
@@ -203,14 +218,19 @@ fun RegisterScreen(navController: NavController, viewModel: AuthViewModel) {
             MannaTextField(
                 label = "Nomor WhatsApp",
                 value = phone,
-                onValueChange = { 
-                    phone = it 
-                    if (phoneError != null) phoneError = null
+                onValueChange = { input ->
+                    if (input.all { it.isDigit() }) {
+                        phone = input
+                        if (phoneError != null) phoneError = null
+                    }
                 },
                 placeholder = "Contoh: 08123456789",
                 leadingIcon = Icons.Default.Phone,
+                enabled = !isLoading,
                 isError = phoneError != null,
-                errorMessage = phoneError
+                errorMessage = phoneError,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                focusRequester = phoneFocusRequester
             )
 
             Spacer(modifier = Modifier.height(20.dp))
@@ -225,8 +245,10 @@ fun RegisterScreen(navController: NavController, viewModel: AuthViewModel) {
                 },
                 placeholder = "nama@email.com",
                 leadingIcon = Icons.Default.Email,
+                enabled = !isLoading,
                 isError = emailError != null,
-                errorMessage = emailError
+                errorMessage = emailError,
+                focusRequester = emailFocusRequester
             )
 
             Spacer(modifier = Modifier.height(20.dp))
@@ -237,19 +259,30 @@ fun RegisterScreen(navController: NavController, viewModel: AuthViewModel) {
                 value = password,
                 onValueChange = { 
                     password = it 
-                    if (passwordError != null) passwordError = null
+                    // Validasi real-time: reset error manual, lalu cek batas
+                    passwordError = when {
+                        it.length > 64 -> "Password maksimal 64 karakter"
+                        else -> null
+                    }
                 },
                 placeholder = "••••••••",
                 leadingIcon = Icons.Default.Lock,
+                enabled = !isLoading,
                 isError = passwordError != null,
                 errorMessage = passwordError,
+                supportingText = "Minimal 8, maksimal 64 karakter",
+                maxLength = 64,
                 trailingIcon = {
                     val image = if (passwordVisible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff
-                    IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                    IconButton(
+                        onClick = { passwordVisible = !passwordVisible },
+                        enabled = !isLoading
+                    ) {
                         Icon(imageVector = image, contentDescription = null, tint = BodyGray)
                     }
                 },
-                visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation()
+                visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                focusRequester = passwordFocusRequester
             )
 
             Spacer(modifier = Modifier.height(20.dp))
@@ -264,15 +297,21 @@ fun RegisterScreen(navController: NavController, viewModel: AuthViewModel) {
                 },
                 placeholder = "••••••••",
                 leadingIcon = Icons.Default.Lock,
+                enabled = !isLoading,
                 isError = confirmPasswordError != null,
                 errorMessage = confirmPasswordError,
+                supportingText = "Harus sama dengan password di atas",
                 trailingIcon = {
                     val image = if (confirmPasswordVisible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff
-                    IconButton(onClick = { confirmPasswordVisible = !confirmPasswordVisible }) {
+                    IconButton(
+                        onClick = { confirmPasswordVisible = !confirmPasswordVisible },
+                        enabled = !isLoading
+                    ) {
                         Icon(imageVector = image, contentDescription = null, tint = BodyGray)
                     }
                 },
-                visualTransformation = if (confirmPasswordVisible) VisualTransformation.None else PasswordVisualTransformation()
+                visualTransformation = if (confirmPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                focusRequester = confirmPasswordFocusRequester
             )
 
             Spacer(modifier = Modifier.height(20.dp))
@@ -287,8 +326,10 @@ fun RegisterScreen(navController: NavController, viewModel: AuthViewModel) {
                 },
                 placeholder = "Masukkan alamat lengkap",
                 leadingIcon = Icons.Default.LocationOn,
+                enabled = !isLoading,
                 isError = addressError != null,
-                errorMessage = addressError
+                errorMessage = addressError,
+                focusRequester = addressFocusRequester
             )
 
             Spacer(modifier = Modifier.height(20.dp))
@@ -303,8 +344,10 @@ fun RegisterScreen(navController: NavController, viewModel: AuthViewModel) {
                 },
                 placeholder = "Pekerjaan",
                 leadingIcon = Icons.Default.Work,
+                enabled = !isLoading,
                 isError = jobError != null,
-                errorMessage = jobError
+                errorMessage = jobError,
+                focusRequester = jobFocusRequester
             )
 
             Spacer(modifier = Modifier.height(20.dp))
@@ -312,7 +355,7 @@ fun RegisterScreen(navController: NavController, viewModel: AuthViewModel) {
             // 8. Tanggal Lahir
             Box(modifier = Modifier
                 .fillMaxWidth()
-                .clickable { datePickerDialog.show() }
+                .clickable(enabled = !isLoading) { datePickerDialog.show() }
             ) {
                 MannaTextField(
                     label = "Tanggal Lahir",
@@ -353,6 +396,7 @@ fun RegisterScreen(navController: NavController, viewModel: AuthViewModel) {
                 OutlinedButton(
                     onClick = { gender = "Laki-laki" },
                     modifier = Modifier.weight(1f),
+                    enabled = !isLoading,
                     shape = RoundedCornerShape(20.dp),
                     border = BorderStroke(1.dp, if (gender == "Laki-laki") GreenPrimary else DividerLight),
                     colors = ButtonDefaults.outlinedButtonColors(
@@ -365,6 +409,7 @@ fun RegisterScreen(navController: NavController, viewModel: AuthViewModel) {
                 OutlinedButton(
                     onClick = { gender = "Perempuan" },
                     modifier = Modifier.weight(1f),
+                    enabled = !isLoading,
                     shape = RoundedCornerShape(20.dp),
                     border = BorderStroke(1.dp, if (gender == "Perempuan") GreenPrimary else DividerLight),
                     colors = ButtonDefaults.outlinedButtonColors(
@@ -383,54 +428,62 @@ fun RegisterScreen(navController: NavController, viewModel: AuthViewModel) {
                 text = "Daftar",
                 onClick = {
                     var isValid = true
+                    var firstInvalidRequester: FocusRequester? = null
                     
                     if (name.isBlank()) {
                         nameError = "Nama lengkap wajib diisi"
-                        isValid = false
+                        if (firstInvalidRequester == null) firstInvalidRequester = nameFocusRequester
                     }
                     
                     if (phone.isBlank()) {
                         phoneError = "Nomor WhatsApp wajib diisi"
-                        isValid = false
+                        if (firstInvalidRequester == null) firstInvalidRequester = phoneFocusRequester
                     } else if (!phone.all { it.isDigit() }) {
                         phoneError = "Nomor WhatsApp harus berupa angka"
-                        isValid = false
+                        if (firstInvalidRequester == null) firstInvalidRequester = phoneFocusRequester
                     }
                     
                     if (email.isBlank()) {
                         emailError = "Email wajib diisi"
-                        isValid = false
+                        if (firstInvalidRequester == null) firstInvalidRequester = emailFocusRequester
                     } else if (!android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
                         emailError = "Format email tidak valid"
-                        isValid = false
+                        if (firstInvalidRequester == null) firstInvalidRequester = emailFocusRequester
                     }
                     
                     if (password.isBlank()) {
                         passwordError = "Password wajib diisi"
-                        isValid = false
+                        if (firstInvalidRequester == null) firstInvalidRequester = passwordFocusRequester
                     } else if (password.length < 8) {
                         passwordError = "Password minimal 8 karakter"
-                        isValid = false
+                        if (firstInvalidRequester == null) firstInvalidRequester = passwordFocusRequester
+                    } else if (password.length > 64) {
+                        passwordError = "Password maksimal 64 karakter"
+                        if (firstInvalidRequester == null) firstInvalidRequester = passwordFocusRequester
                     }
                     
                     if (confirmPassword != password) {
                         confirmPasswordError = "Password tidak cocok"
-                        isValid = false
+                        if (firstInvalidRequester == null) firstInvalidRequester = confirmPasswordFocusRequester
                     }
                     
                     if (address.isBlank()) {
                         addressError = "Alamat wajib diisi"
-                        isValid = false
+                        if (firstInvalidRequester == null) firstInvalidRequester = addressFocusRequester
                     }
                     
                     if (birthDate.isBlank()) {
                         birthDateError = "Tanggal lahir wajib diisi"
-                        isValid = false
                     }
                     
                     if (job.isBlank()) {
                         jobError = "Pekerjaan wajib diisi"
+                        if (firstInvalidRequester == null) firstInvalidRequester = jobFocusRequester
+                    }
+
+                    if (firstInvalidRequester != null) {
                         isValid = false
+                        firstInvalidRequester.requestFocus()
                     }
 
                     if (isValid) {
@@ -440,7 +493,8 @@ fun RegisterScreen(navController: NavController, viewModel: AuthViewModel) {
                         )
                     }
                 },
-                isLoading = authState is ApiResult.Loading
+                isLoading = isLoading,
+                enabled = !isLoading
             )
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -460,6 +514,7 @@ fun RegisterScreen(navController: NavController, viewModel: AuthViewModel) {
                         googleLauncher.launch(signInIntent)
                     }
                 },
+                enabled = !isLoading,
                 borderColor = GreenLight,
                 contentColor = SlateTextDark,
                 icon = {
@@ -484,7 +539,7 @@ fun RegisterScreen(navController: NavController, viewModel: AuthViewModel) {
                             fontWeight = FontWeight.Bold, 
                             color = GreenPrimary
                         ),
-                        modifier = Modifier.clickable { navController.navigate("login") }
+                        modifier = if (isLoading) Modifier else Modifier.clickable { navController.navigate("login") }
                     )
                 }
             }

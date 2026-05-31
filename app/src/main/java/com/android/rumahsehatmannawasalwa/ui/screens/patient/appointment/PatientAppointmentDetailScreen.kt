@@ -48,6 +48,10 @@ import com.android.rumahsehatmannawasalwa.ui.components.buttons.MannaButton
 import com.android.rumahsehatmannawasalwa.ui.navigation.Screen
 import com.android.rumahsehatmannawasalwa.ui.viewmodel.booking.AppointmentDetailViewModel
 import com.android.rumahsehatmannawasalwa.utils.AppConstants
+import com.android.rumahsehatmannawasalwa.ui.components.ActionOverlay
+import com.android.rumahsehatmannawasalwa.ui.components.snackbar.MannaSnackbar
+import com.android.rumahsehatmannawasalwa.ui.components.snackbar.MannaSnackbarVisuals
+import com.android.rumahsehatmannawasalwa.ui.components.snackbar.SnackbarType
 import com.android.rumahsehatmannawasalwa.utils.FormatterUtils
 import android.content.Intent
 import android.net.Uri
@@ -62,6 +66,10 @@ fun PatientAppointmentDetailScreen(
     viewModel: AppointmentDetailViewModel = viewModel()
 ) {
     val state by viewModel.detailState.collectAsState()
+    val isUpdating by viewModel.isUpdating.collectAsState()
+    val actionMessage by viewModel.actionMessage.collectAsState()
+
+    val snackbarHostState = remember { SnackbarHostState() }
     val context = LocalContext.current
 
     var selectedProofUri by remember { mutableStateOf<android.net.Uri?>(null) }
@@ -76,12 +84,26 @@ fun PatientAppointmentDetailScreen(
         viewModel.subscribeToRealTimeUpdate(bookingId)
     }
 
+    LaunchedEffect(actionMessage) {
+        actionMessage?.let { msg ->
+            val type = if (msg.contains("gagal", ignoreCase = true) || msg.contains("error", ignoreCase = true)) {
+                SnackbarType.ERROR
+            } else {
+                SnackbarType.SUCCESS
+            }
+            snackbarHostState.showSnackbar(
+                MannaSnackbarVisuals(message = msg, type = type)
+            )
+            viewModel.resetActionMessage()
+        }
+    }
+
     // Cleanup: unsubscribe saat screen di-dispose
     DisposableEffect(bookingId) {
         onDispose { viewModel.unsubscribeFromRealTimeUpdate(bookingId) }
     }
 
-    Column(
+    Box(
         modifier = Modifier
             .fillMaxSize()
             .background(
@@ -94,6 +116,9 @@ fun PatientAppointmentDetailScreen(
                 )
             )
     ) {
+        Column(
+            modifier = Modifier.fillMaxSize()
+        ) {
         // TopBar
         Spacer(modifier = Modifier.height(12.dp))
 
@@ -199,6 +224,20 @@ fun PatientAppointmentDetailScreen(
             }
         }
     }
+
+    SnackbarHost(
+        hostState = snackbarHostState,
+        modifier = Modifier
+            .align(Alignment.BottomCenter)
+            .padding(bottom = 32.dp)
+    ) { data ->
+        MannaSnackbar(snackbarData = data)
+    }
+
+    if (isUpdating) {
+        ActionOverlay()
+    }
+}
 }
 
 @Composable

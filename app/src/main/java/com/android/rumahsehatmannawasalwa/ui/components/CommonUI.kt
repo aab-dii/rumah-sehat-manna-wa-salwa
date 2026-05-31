@@ -1,6 +1,10 @@
 package com.android.rumahsehatmannawasalwa.ui.components
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.runtime.remember
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -51,7 +55,17 @@ fun DetailRowSejajar(
 
 @Composable
 fun ActionOverlay() {
-    Surface(color = Color.Black.copy(alpha = 0.4f), modifier = Modifier.fillMaxSize()) {
+    Surface(
+        color = Color.Black.copy(alpha = 0.4f),
+        modifier = Modifier
+            .fillMaxSize()
+            .pointerInput(Unit) {}
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                onClick = {}
+            )
+    ) {
         Box(contentAlignment = Alignment.Center) {
             Card(shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp)) {
                 Row(Modifier.padding(24.dp), verticalAlignment = Alignment.CenterVertically) {

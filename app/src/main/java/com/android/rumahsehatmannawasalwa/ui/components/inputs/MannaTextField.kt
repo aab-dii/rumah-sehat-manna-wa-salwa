@@ -5,7 +5,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.selection.TextSelectionColors
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.VisualTransformation
@@ -27,9 +30,12 @@ fun MannaTextField(
     enabled: Boolean = true,
     isError: Boolean = false,
     errorMessage: String? = null,
+    supportingText: String? = null,
+    maxLength: Int? = null,
     colors: TextFieldColors? = null,
     keyboardOptions: androidx.compose.foundation.text.KeyboardOptions = androidx.compose.foundation.text.KeyboardOptions.Default,
-    keyboardActions: androidx.compose.foundation.text.KeyboardActions = androidx.compose.foundation.text.KeyboardActions.Default
+    keyboardActions: androidx.compose.foundation.text.KeyboardActions = androidx.compose.foundation.text.KeyboardActions.Default,
+    focusRequester: FocusRequester? = null
 ) {
     Column(modifier = modifier.fillMaxWidth()) {
         Text(
@@ -43,7 +49,7 @@ fun MannaTextField(
         OutlinedTextField(
             value = value,
             onValueChange = onValueChange,
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier),
             placeholder = { Text(placeholder, color = GrayText) },
             isError = isError,
             leadingIcon = leadingIcon?.let {
@@ -77,13 +83,50 @@ fun MannaTextField(
             keyboardOptions = keyboardOptions,
             keyboardActions = keyboardActions
         )
-        if (isError && !errorMessage.isNullOrEmpty()) {
-            Text(
-                text = errorMessage,
-                color = MaterialTheme.colorScheme.error,
-                style = MaterialTheme.typography.bodySmall,
-                modifier = Modifier.padding(start = 16.dp, top = 4.dp)
-            )
+
+        // Area teks pendukung: error message, helper text, dan counter karakter
+        val hasError = isError && !errorMessage.isNullOrEmpty()
+        val hasSupporting = supportingText != null
+        val hasCounter = maxLength != null
+        val isOverLimit = maxLength != null && value.length > maxLength
+
+        if (hasError || hasSupporting || hasCounter) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 16.dp, end = 16.dp, top = 4.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.Top
+            ) {
+                // Kolom kiri: error message atau supporting text
+                if (hasError) {
+                    Text(
+                        text = errorMessage!!,
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.weight(1f, fill = false)
+                    )
+                } else if (hasSupporting) {
+                    Text(
+                        text = supportingText!!,
+                        color = BodyGray,
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.weight(1f, fill = false)
+                    )
+                } else {
+                    Spacer(modifier = Modifier.weight(1f))
+                }
+
+                // Kolom kanan: counter karakter
+                if (hasCounter) {
+                    Text(
+                        text = "${value.length}/$maxLength",
+                        color = if (isOverLimit) MaterialTheme.colorScheme.error else BodyGray,
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.padding(start = 8.dp)
+                    )
+                }
+            }
         }
     }
 }
