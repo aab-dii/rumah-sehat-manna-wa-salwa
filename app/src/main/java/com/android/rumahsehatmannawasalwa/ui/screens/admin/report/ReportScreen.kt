@@ -84,8 +84,10 @@ fun ReportScreen(
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
 
-    // Load data
-    LaunchedEffect(period, startDate, endDate, selectedTherapistId) {
+    // Load data hanya sekali saat layar pertama kali dibuka.
+    // Perubahan filter selanjutnya sudah ditangani oleh ViewModel
+    // melalui setPeriod(), setDateRange(), setSelectedTherapistId().
+    LaunchedEffect(Unit) {
         viewModel.fetchAllReports()
     }
 

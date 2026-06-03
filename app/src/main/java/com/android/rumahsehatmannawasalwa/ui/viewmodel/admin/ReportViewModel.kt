@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.android.rumahsehatmannawasalwa.data.ApiResult
 import com.android.rumahsehatmannawasalwa.data.model.report.*
 import com.android.rumahsehatmannawasalwa.data.repository.ReportRepository
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -34,6 +35,9 @@ class ReportViewModel(private val repository: ReportRepository) : ViewModel() {
     private val _isExporting = MutableStateFlow(false)
     val isExporting = _isExporting.asStateFlow()
 
+    // Mode: apakah ViewModel ini digunakan oleh Admin/SuperAdmin atau Terapis
+    private var isAdminMode = true
+
     // ═══════════════════════════════════════════════════════
     // REPORT DATA STATES
     // ═══════════════════════════════════════════════════════
@@ -45,7 +49,6 @@ class ReportViewModel(private val repository: ReportRepository) : ViewModel() {
     val financialTransactions = _financialTransactions.asStateFlow()
     private var financialCurrentPage = 1
     private var financialLastPage = 1
-    private var isFetchingFinancial = false
 
     // 2. Visits Report State (Admin/Super Admin)
     private val _visitsState = MutableStateFlow<ApiResult<VisitReportResponse>>(ApiResult.Loading)
@@ -54,7 +57,6 @@ class ReportViewModel(private val repository: ReportRepository) : ViewModel() {
     val visitsItems = _visitsItems.asStateFlow()
     private var visitsCurrentPage = 1
     private var visitsLastPage = 1
-    private var isFetchingVisits = false
 
     // 3. Therapist Performance State
     private val _performanceState = MutableStateFlow<ApiResult<PerformanceReportResponse>>(ApiResult.Loading)
@@ -67,6 +69,15 @@ class ReportViewModel(private val repository: ReportRepository) : ViewModel() {
     // 5. Comparative Report State (Super Admin Only)
     private val _comparativeState = MutableStateFlow<ApiResult<ComparativeReportResponse>>(ApiResult.Loading)
     val comparativeState: StateFlow<ApiResult<ComparativeReportResponse>> = _comparativeState.asStateFlow()
+
+    // ═══════════════════════════════════════════════════════
+    // ACTIVE COROUTINE JOBS (untuk mencegah race condition)
+    // ═══════════════════════════════════════════════════════
+    private var financialJob: Job? = null
+    private var visitsJob: Job? = null
+    private var performanceJob: Job? = null
+    private var activityJob: Job? = null
+    private var comparativeJob: Job? = null
 
     init {
         // Set default date range to current month
@@ -97,6 +108,7 @@ class ReportViewModel(private val repository: ReportRepository) : ViewModel() {
                 _endDate.value = lastDay.format(formatter)
             }
         }
+        // ViewModel langsung memicu fetch sendiri — UI tidak perlu memicu lagi
         resetPaginationAndFetch()
     }
 
@@ -111,38 +123,56 @@ class ReportViewModel(private val repository: ReportRepository) : ViewModel() {
         resetPaginationAndFetch()
     }
 
+    /**
+     * Menandai mode penggunaan ViewModel: Admin atau Terapis.
+     * Panggil sekali saat layar pertama kali dibuka.
+     */
+    fun setAdminMode(isAdmin: Boolean) {
+        isAdminMode = isAdmin
+    }
+
     private fun resetPaginationAndFetch() {
-        // Financial
-        financialCurrentPage = 1
-        financialLastPage = 1
-        _financialTransactions.value = emptyList()
+        // Financial (hanya dipakai Admin)
+        if (isAdminMode) {
+            financialCurrentPage = 1
+            financialLastPage = 1
+            _financialTransactions.value = emptyList()
+        }
 
         // Visits
         visitsCurrentPage = 1
         visitsLastPage = 1
         _visitsItems.value = emptyList()
 
-        // Fetch everything active or fetch on demand depending on what tab is visible
+        // Fetch sesuai mode
         fetchAllReports()
     }
 
     fun fetchAllReports() {
-        fetchFinancialReport()
-        fetchVisitsReport(isAdmin = true)
-        fetchPerformanceReport(isAdmin = true)
-        fetchActivityReport()
-        fetchComparativeReport()
+        if (isAdminMode) {
+            fetchFinancialReport()
+            fetchVisitsReport(isAdmin = true)
+            fetchPerformanceReport(isAdmin = true)
+            fetchActivityReport()
+            fetchComparativeReport()
+        } else {
+            // Mode Terapis: hanya fetch kunjungan & kinerja milik sendiri
+            fetchVisitsReport(isAdmin = false)
+            fetchPerformanceReport(isAdmin = false)
+        }
     }
 
     // ═══════════════════════════════════════════════════════
     // FETCH API METHODS
+    // Setiap fetch membatalkan Job sebelumnya agar tidak terjadi
+    // race condition saat user mengganti filter dengan cepat.
     // ═══════════════════════════════════════════════════════
 
     fun fetchFinancialReport() {
-        if (isFetchingFinancial) return
-        isFetchingFinancial = true
+        // Batalkan request sebelumnya jika masih berjalan
+        financialJob?.cancel()
 
-        viewModelScope.launch {
+        financialJob = viewModelScope.launch {
             repository.getFinancialReport(
                 period = _period.value,
                 startDate = _startDate.value,
@@ -156,23 +186,22 @@ class ReportViewModel(private val repository: ReportRepository) : ViewModel() {
                     _financialTransactions.value = oldData + newData
                     financialLastPage = result.data.pagination?.lastPage ?: 1
                 }
-                isFetchingFinancial = false
             }
         }
     }
 
     fun loadMoreFinancial() {
-        if (!isFetchingFinancial && financialCurrentPage < financialLastPage) {
+        if (financialJob?.isActive != true && financialCurrentPage < financialLastPage) {
             financialCurrentPage++
             fetchFinancialReport()
         }
     }
 
     fun fetchVisitsReport(isAdmin: Boolean) {
-        if (isFetchingVisits) return
-        isFetchingVisits = true
+        // Batalkan request sebelumnya jika masih berjalan
+        visitsJob?.cancel()
 
-        viewModelScope.launch {
+        visitsJob = viewModelScope.launch {
             val flow = if (isAdmin) {
                 repository.getVisitsReport(
                     period = _period.value,
@@ -198,20 +227,21 @@ class ReportViewModel(private val repository: ReportRepository) : ViewModel() {
                     _visitsItems.value = oldData + newData
                     visitsLastPage = result.data.pagination?.lastPage ?: 1
                 }
-                isFetchingVisits = false
             }
         }
     }
 
     fun loadMoreVisits(isAdmin: Boolean) {
-        if (!isFetchingVisits && visitsCurrentPage < visitsLastPage) {
+        if (visitsJob?.isActive != true && visitsCurrentPage < visitsLastPage) {
             visitsCurrentPage++
             fetchVisitsReport(isAdmin)
         }
     }
 
     fun fetchPerformanceReport(isAdmin: Boolean) {
-        viewModelScope.launch {
+        performanceJob?.cancel()
+
+        performanceJob = viewModelScope.launch {
             val flow = if (isAdmin) {
                 repository.getPerformanceReport(_period.value, _startDate.value, _endDate.value)
             } else {
@@ -224,7 +254,9 @@ class ReportViewModel(private val repository: ReportRepository) : ViewModel() {
     }
 
     fun fetchActivityReport() {
-        viewModelScope.launch {
+        activityJob?.cancel()
+
+        activityJob = viewModelScope.launch {
             repository.getActivityReport(_period.value, _startDate.value, _endDate.value).collect { result ->
                 _activityState.value = result
             }
@@ -232,7 +264,9 @@ class ReportViewModel(private val repository: ReportRepository) : ViewModel() {
     }
 
     fun fetchComparativeReport() {
-        viewModelScope.launch {
+        comparativeJob?.cancel()
+
+        comparativeJob = viewModelScope.launch {
             repository.getComparativeReport(_period.value, _startDate.value, _endDate.value).collect { result ->
                 _comparativeState.value = result
             }

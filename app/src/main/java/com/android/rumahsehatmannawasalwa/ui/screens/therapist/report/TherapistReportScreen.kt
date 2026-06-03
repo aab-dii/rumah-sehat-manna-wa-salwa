@@ -59,8 +59,11 @@ fun TherapistReportScreen(
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
 
-    // Fetch data on enter or when filters change
-    LaunchedEffect(period, startDate, endDate) {
+    // Fetch data hanya sekali saat layar pertama kali dibuka.
+    // Perubahan filter selanjutnya sudah ditangani oleh ViewModel
+    // melalui setPeriod(), setDateRange().
+    LaunchedEffect(Unit) {
+        viewModel.setAdminMode(false)
         viewModel.fetchVisitsReport(isAdmin = false)
         viewModel.fetchPerformanceReport(isAdmin = false)
     }
