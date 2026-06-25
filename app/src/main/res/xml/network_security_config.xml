@@ -3,7 +3,7 @@
     <domain-config cleartextTrafficPermitted="true">
         <domain includeSubdomains="true">10.0.2.2</domain>
         <domain includeSubdomains="true">localhost</domain>
-        <domain includeSubdomains="true">192.168.1.6</domain>
+        <domain includeSubdomains="true">192.168.1.5</domain>
         <domain includeSubdomains="true">192.168.1.39</domain>
         <domain includeSubdomains="true">192.168.110.195</domain>
         <domain includeSubdomains="true">192.168.100.49</domain>
@@ -11,6 +11,5 @@
         <domain includeSubdomains="true">10.10.202.138</domain>
         <domain includeSubdomains="true">10.10.201.75</domain>
         <!-- Jika pakai HP Fisik, tambahkan IP Laptop di sini juga, misal: -->
-        <!-- <domain includeSubdomains="true">192.168.1.10</domain> -->
     </domain-config>
 </network-security-config>

@@ -14,6 +14,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.DialogProperties
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.ui.Alignment
@@ -208,6 +212,13 @@ fun PriceDetailRow(label: String, value: Int) {
 fun RejectPaymentSection(id: Int, viewModel: AppointmentDetailViewModel) {
     var showDialog by remember { mutableStateOf(false) }
     var reason by remember { mutableStateOf("") }
+    val focusManager = androidx.compose.ui.platform.LocalFocusManager.current
+    var isTextFieldFocused by remember { mutableStateOf(false) }
+
+    // Intercept back button when text field has focus to close keyboard instead of dismissing dialog
+    BackHandler(enabled = isTextFieldFocused) {
+        focusManager.clearFocus()
+    }
 
     MannaButton(
         text = "Tolak Bukti Pembayaran",
@@ -218,9 +229,15 @@ fun RejectPaymentSection(id: Int, viewModel: AppointmentDetailViewModel) {
     if (showDialog) {
         AlertDialog(
             onDismissRequest = { showDialog = false },
+            containerColor = Color.White,
+            titleContentColor = TextPrimary,
+            textContentColor = TextPrimary,
             title = { Text("Tolak Pembayaran", fontWeight = FontWeight.Bold) },
             text = {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Column(
+                    modifier = Modifier.verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
                     Text(
                         "Berikan alasan penolakan agar pasien dapat mengunggah ulang bukti yang benar.",
                         fontSize = 14.sp,
@@ -230,8 +247,19 @@ fun RejectPaymentSection(id: Int, viewModel: AppointmentDetailViewModel) {
                         value = reason,
                         onValueChange = { reason = it },
                         label = { Text("Alasan Penolakan") },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(8.dp)
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .onFocusChanged { isTextFieldFocused = it.isFocused },
+                        shape = RoundedCornerShape(8.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedTextColor = TextPrimary,
+                            unfocusedTextColor = TextPrimary,
+                            focusedBorderColor = GreenPrimary,
+                            unfocusedBorderColor = SlateDisabled,
+                            focusedLabelColor = GreenPrimary,
+                            unfocusedLabelColor = TextSecondary,
+                            cursorColor = GreenPrimary
+                        )
                     )
                 }
             },

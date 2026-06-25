@@ -167,9 +167,10 @@ fun TherapistAppointmentScreen(
                             onClick = {
                                  ui.appointment?.let { navController.navigate(Screen.TherapistAppointmentDetail.createRoute(it.id)) }
                             },
-                            actions = if (!isHistory) {
+                            actions = if (!isHistory || ui.appointment?.status == "force_completed") {
                                 {
                                     val isInProgress = ui.appointment?.status == "in_progress"
+                                    val isForceCompleted = ui.appointment?.status == "force_completed"
                                     
                                     // Tombol Lihat Riwayat
                                     MannaOutlinedButton(
@@ -182,10 +183,10 @@ fun TherapistAppointmentScreen(
 
                                     // Tombol Mulai / Selesaikan
                                     MannaButton(
-                                        text = if (isInProgress) "Terapi" else "Mulai",
+                                        text = if (isForceCompleted) "Isi Catatan" else if (isInProgress) "Terapi" else "Mulai",
                                         onClick = {
                                             ui.appointment?.let { appointment ->
-                                                if (isInProgress) {
+                                                if (isInProgress || isForceCompleted) {
                                                     // Selesaikan -> Buka form rekam medis
                                                     val patientId = ui.patient?.id
                                                     val therapistId = ui.therapist?.id

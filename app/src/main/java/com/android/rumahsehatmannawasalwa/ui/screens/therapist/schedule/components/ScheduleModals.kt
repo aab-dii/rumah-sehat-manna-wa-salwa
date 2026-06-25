@@ -14,6 +14,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.android.rumahsehatmannawasalwa.ui.theme.GreenPrimary
 import com.android.rumahsehatmannawasalwa.ui.theme.RedDanger
+import com.android.rumahsehatmannawasalwa.ui.theme.TextPrimary
+import com.android.rumahsehatmannawasalwa.ui.theme.TextSecondary
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import java.util.Calendar
@@ -34,7 +36,9 @@ fun EmergencyCloseSheet(
 
     ModalBottomSheet(
         onDismissRequest = onDismissRequest,
-        sheetState = sheetState
+        sheetState = sheetState,
+        containerColor = Color.White,
+        contentColor = TextPrimary
     ) {
         Column(
             modifier = Modifier
@@ -62,7 +66,16 @@ fun EmergencyCloseSheet(
                 onValueChange = { cancellationReason = it },
                 label = { Text("Alasan Penutupan") },
                 modifier = Modifier.fillMaxWidth(),
-                minLines = 3
+                minLines = 3,
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedTextColor = TextPrimary,
+                    unfocusedTextColor = TextPrimary,
+                    focusedBorderColor = RedDanger,
+                    unfocusedBorderColor = Color.LightGray,
+                    focusedLabelColor = RedDanger,
+                    unfocusedLabelColor = TextSecondary,
+                    cursorColor = RedDanger
+                )
             )
 
             Spacer(modifier = Modifier.height(24.dp))
@@ -115,7 +128,10 @@ fun AddHolidayDialog(
 
     AlertDialog(
         onDismissRequest = onDismissRequest,
-        title = { Text("Tambah Hari Libur Ekstra") },
+        containerColor = Color.White,
+        titleContentColor = TextPrimary,
+        textContentColor = TextPrimary,
+        title = { Text("Tambah Hari Libur Ekstra", fontWeight = FontWeight.Bold) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 DatePickerField(label = "Tanggal Mulai", date = holidayStartDate) { holidayStartDate = it }
@@ -124,7 +140,16 @@ fun AddHolidayDialog(
                     value = holidayReason,
                     onValueChange = { holidayReason = it },
                     label = { Text("Alasan") },
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedTextColor = TextPrimary,
+                        unfocusedTextColor = TextPrimary,
+                        focusedBorderColor = GreenPrimary,
+                        unfocusedBorderColor = Color.LightGray,
+                        focusedLabelColor = GreenPrimary,
+                        unfocusedLabelColor = TextSecondary,
+                        cursorColor = GreenPrimary
+                    )
                 )
             }
         },
@@ -144,7 +169,7 @@ fun AddHolidayDialog(
         },
         dismissButton = {
             TextButton(onClick = onDismissRequest) {
-                Text("Batal")
+                Text("Batal", color = GreenPrimary)
             }
         }
     )
@@ -172,9 +197,22 @@ fun DatePickerField(label: String, date: String, onDateSelected: (String) -> Uni
         label = { Text(label) },
         readOnly = true,
         modifier = Modifier.fillMaxWidth(),
+        colors = OutlinedTextFieldDefaults.colors(
+            focusedTextColor = TextPrimary,
+            unfocusedTextColor = TextPrimary,
+            focusedBorderColor = GreenPrimary,
+            unfocusedBorderColor = Color.LightGray,
+            focusedLabelColor = GreenPrimary,
+            unfocusedLabelColor = TextSecondary,
+            cursorColor = GreenPrimary
+        ),
         trailingIcon = {
             IconButton(onClick = { datePickerDialog.show() }) {
-                Icon(Icons.Default.DateRange, contentDescription = "Select Date")
+                Icon(
+                    Icons.Default.DateRange,
+                    contentDescription = "Select Date",
+                    tint = GreenPrimary
+                )
             }
         },
         interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }

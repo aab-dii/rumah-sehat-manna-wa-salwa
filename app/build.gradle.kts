@@ -21,9 +21,9 @@ android {
         }
 //        buildConfigField("String", "BASE_URL", "\"http://10.0.2.2:8000/api/\"")
 //        buildConfigField("String", "BASE_URL", "\"http://192.168.110.24:8000/api/\"")
-//        buildConfigField("String", "BASE_URL", "\"http://192.168.1.6:8000/api/\"")
+        buildConfigField("String", "BASE_URL", "\"http://192.168.1.5:8000/api/\"")
         buildConfigField("String", "ADMIN_WHATSAPP", "\"6285220264022\"")
-        buildConfigField("String", "BASE_URL", "\"http://192.168.110.195:8000/api/\"")
+//        buildConfigField("String", "BASE_URL", "\"http://192.168.110.195:8000/api/\"")
 //        buildConfigField("String", "BASE_URL", "\"http://10.99.171.192:8000/api/\"")
 //        buildConfigField("String", "BASE_URL", "\"http://10.10.202.138:8000/api/\"")
 //        buildConfigField("String", "BASE_URL", "\"http://10.10.201.75:8000/api/\"")

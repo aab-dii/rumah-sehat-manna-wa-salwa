@@ -223,7 +223,10 @@ fun TherapistDetailContent(
 
         // Action Buttons at the bottom of detail page
         val bStatus = data.appointment?.status?.lowercase()
-        if (bStatus != "canceled" && bStatus != "cancelled" && bStatus != "completed" && bStatus != "force_completed") {
+        val recordId = data.appointment?.therapyRecordId
+        val needsRecord = bStatus == "force_completed" && (recordId == null || recordId == 0)
+
+        if (bStatus != "canceled" && bStatus != "cancelled" && bStatus != "completed" && !needsRecord) {
             val isInProgress = bStatus == "in_progress"
             Row(
                 modifier = Modifier
@@ -254,9 +257,34 @@ fun TherapistDetailContent(
                     containerColor = if (isInProgress) Color(0xFF0288D1) else GreenPrimary
                 )
             }
+        } else if (needsRecord) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 12.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                // Button 1: History / Riwayat
+                MannaOutlinedButton(
+                    text = "Riwayat Pasien",
+                    onClick = { data.patient?.let { navController.navigate(Screen.PatientHistory.createRoute(it.id)) } },
+                    modifier = Modifier.weight(1f).height(48.dp),
+                    contentColor = GreenPrimary,
+                    borderColor = GreenPrimary
+                )
+
+                // Button 2: Tulis Catatan Terapi
+                MannaButton(
+                    text = "Tulis Catatan Terapi",
+                    onClick = {
+                        navController.navigate(Screen.TherapyRecordForm.createRoute(data.appointment?.id ?: 0))
+                    },
+                    modifier = Modifier.weight(1.2f).height(48.dp),
+                    containerColor = GreenPrimary
+                )
+            }
         } else if (bStatus == "completed" || bStatus == "force_completed") {
             // Button to View Therapy Record
-            val recordId = data.appointment?.therapyRecordId
             MannaButton(
                 text = "Lihat Catatan Terapi",
                 onClick = {

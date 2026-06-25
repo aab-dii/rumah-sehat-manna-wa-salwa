@@ -110,8 +110,8 @@ val historyFilterOptions = listOf(
 
 /** Chip untuk tab "Riwayat" (terapis) */
 val therapistHistoryFilterOptions = listOf(
-    FilterChipOption("Semua", "completed,canceled"),
-    FilterChipOption("Selesai", "completed"),
+    FilterChipOption("Semua", "completed,canceled,force_completed"),
+    FilterChipOption("Selesai", "completed,force_completed"),
     FilterChipOption("Dibatalkan", "canceled"),
     FilterChipOption("Perlu Isi", "force_completed"),
 )
