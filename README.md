@@ -12,31 +12,69 @@ Aplikasi **Rumah Sehat Manna wa Salwa** dirancang untuk memudahkan pasien melaku
 
 ---
 
-## 👥 Peran Pengguna & Fitur Utama
+## 👥 Detail Fitur Utama Aplikasi
+Berikut adalah rincian fungsionalitas dan fitur teknis lengkap yang telah diimplementasikan dalam aplikasi Android berdasarkan pembagian peran (*role*):
 
 ### 1. Pasien (Patient Role)
-* **Katalog Layanan:** Memilih jenis terapi yang aktif (Bekam, Akupunktur, Ramuan).
-* **Reservasi Jadwal (Booking):** Memilih terapis, tanggal, serta jam slot terapi yang kosong (slot waktu dihitung dinamis dari jadwal aktif terapis).
-* **Metode Pembayaran:** Mendukung pembayaran Tunai (Cash) dan Transfer Bank (dengan pengunggahan foto bukti transfer).
-* **Real-time Transfer Countdown:** Batas transfer 24 jam dengan timer hitung mundur interaktif untuk menghindari pembatalan otomatis.
-* **Antrean Dinamis:** Pasien mendapatkan nomor antrean hari berjalan per terapis secara dinamis berdasarkan jam booking (dan *tie-breaker created_at*).
-* **Rekam Terapi:** Melihat riwayat diagnosa dan tindakan terapis secara transparan setelah sesi diselesaikan.
+* **Katalog Layanan Klinik (Jetpack Compose):**
+  * Halaman katalog interaktif berbasis Compose untuk melihat jenis terapi yang aktif (Bekam, Akupunktur, Ramuan).
+  * Dilengkapi dengan estimasi durasi pelayanan, harga terperinci, dan ikon gambar dinamis yang dimuat dari server.
+* **Alur Reservasi Terpandu (Booking Flow):**
+  * Alur pembuatan janji temu langkah-demi-langkah (pilih layanan $\rightarrow$ pilih tanggal $\rightarrow$ pilih jam slot praktik $\rightarrow$ pilih terapis tersedia).
+  * Filter jadwal dinamis untuk memastikan tidak ada slot waktu ganda pada terapis yang sama.
+* **Metode Pembayaran & Unggah Berkas:**
+  * Pilihan metode pembayaran **Tunai (Cash)** atau **Transfer Bank**.
+  * Pengintegrasian *System Image Picker* untuk memilih berkas bukti bayar dan mengirimkannya menggunakan `MultipartBody.Part` via Retrofit.
+* **Real-time Transfer Countdown (Batas Waktu Pembayaran):**
+  * Hitung mundur interaktif selama 24 jam khusus untuk metode transfer bank.
+  * Proteksi logika visual: countdown hanya berjalan pada transaksi berstatus `pending/unpaid` dengan metode transfer, memastikan transaksi tunai atau yang sudah terkonfirmasi tidak mengalami kesalahan visual pembatalan.
+* **Kartu Informasi Antrean Dinamis (`QueueInfoCard`):**
+  * Komponen visual premium berwarna *GreenPrimary* dan *GreenSoft* yang menampilkan nomor antrean hari berjalan pasien secara real-time.
+  * Nomor antrean dihitung dinamis per hari per terapis dengan logika pengurutan `booking_time` (dan *tie-breaker* `created_at` jika jam booking sama).
+* **Riwayat Rekam Terapi Kronologis (Timeline):**
+  * Tampilan rekam medis pribadi pasien dalam bentuk linimasa (timeline) yang rapi.
+  * Pasien dapat melacak perkembangan keluhan, diagnosis terapis, titik bekam yang dipasang, serta ramuan herbal yang diresepkan dari waktu ke waktu.
 
 ### 2. Terapis (Therapist Role)
-* **Dashboard Statistik:** Menampilkan total sesi bulanan, sesi terjadwal, dan sesi berstatus "Belum Isi Catatan" (Force Completed oleh Admin).
-* **Agenda Hari Ini:** Daftar antrean pasien yang akan dilayani pada hari berjalan.
-* **Mulai Sesi:** Mengubah status janji temu menjadi "Sedang Berlangsung".
-* **Isi Rekam Medis:** Formulir pengisian diagnosa keluhan, tindakan yang diambil, dan catatan tambahan terapis untuk merampungkan janji temu menjadi "Selesai".
+* **Dashboard Statistik Terapis:**
+  * Kartu indikator performa untuk memantau total sesi terapi yang telah dilayani bulan ini.
+  * Indikator janji temu mendatang yang terjadwal.
+  * Indikator peringatan khusus untuk sesi yang berstatus **"Belum Isi Catatan"** (akibat tindakan *Force Complete* oleh admin).
+* **Agenda Hari Ini & Manajemen Sesi:**
+  * Menampilkan daftar antrean pasien secara berurutan sesuai jam pelayanan hari berjalan.
+  * Tombol aksi **"Mulai Sesi"** untuk memperbarui status transaksi menjadi `in_progress`.
+* **Formulir Rekam Terapi (`TherapyRecordFormScreen`):**
+  * Formulir pengisian rekam medis terstruktur: keluhan utama, diagnosis klinis, titik bekam (jika memilih bekam), ramuan herbal yang diresepkan, dan catatan evaluasi terapis.
+* **Penanganan Transaksi Force Completed (Pengisian Catatan Riwayat):**
+  * Menyelesaikan masalah transaksi yang dipaksa selesai oleh admin (*Force Completed*).
+  * Janji temu ini tetap muncul pada daftar riwayat terapis dengan status khusus. Terapis wajib mengisi rekam medis dengan menekan tombol **"Isi Catatan Terapi"** langsung dari kartu riwayat janji temu tersebut agar data rekam medis pasien tetap lengkap dan akurat.
 
 ### 3. Admin / Super Admin (Management Role)
-* **Verifikasi Transaksi:** Memeriksa berkas bukti transfer pasien untuk menyetujui atau menolak (disertai pengisian alasan penolakan).
-* **Force Complete:** Menyelesaikan sesi janji temu yang terlewat ditutup oleh terapis agar pembayaran & status laporan terekam rapi.
-* **Ekspor Laporan PDF:** Menghasilkan laporan berformat PDF standar A4 Landscape:
-  1. *Laporan Keuangan* (Pendapatan riil tunai/transfer, refund).
-  2. *Laporan Kunjungan Terapis* (Hardcoded detail alamat klinik, penutupan STPT, total pasien L/P).
-  3. *Laporan Kinerja Terapis* (Sesi & pendapatan terapis).
-  4. *Laporan Kegiatan Klinik* (Layanan terpopuler, grafik sesi).
-  5. *Laporan Komparatif Terapis* (Khusus Super Admin - visualisasi grafik kontribusi sesi terapis).
+* **Manajemen Pengguna (User Management Screen):**
+  * CRUD data pengguna untuk peran Pasien, Terapis, dan Admin melalui antarmuka `AdminManageUsersScreen`.
+  * Filter tab untuk memisahkan data pengguna aktif dan pengguna yang dinonaktifkan (berada di keranjang sampah / *Trash*).
+  * Tombol **Restore** untuk memulihkan kembali akun dari trash ke status aktif.
+  * Form pembuatan dan penyuntingan akun terapis baru dengan dropdown terapis dinamis.
+* **Verifikasi Transaksi Pembayaran:**
+  * Layar verifikasi khusus untuk memeriksa detail pemesanan dan berkas foto bukti transfer yang diunggah pasien.
+  * Aksi persetujuan (**Accept**) untuk mengubah status menjadi `confirmed` atau penolakan (**Reject**) disertai formulir pengisian alasan penolakan yang akan dikirim ke pasien.
+* **Force Complete:**
+  * Tombol darurat untuk menyelesaikan transaksi secara paksa jika terapis lupa menutup sesi janji temu, guna mengunci data transaksi dan laporan keuangan.
+* **Multi-Tab Ekspor Laporan & Cetak PDF:**
+  * Halaman laporan interaktif (`ReportScreen`) dengan tab terpisah untuk:
+    1. **Laporan Keuangan:** Rekapitulasi pendapatan tunai, transfer, dan refund.
+    2. **Laporan Kunjungan Terapis:** Menampilkan kunjungan pasien dengan detail alamat klinik, STPT (Surat Terdaftar Penyehat Tradisional), dan filter gender (L/P).
+    3. **Laporan Kinerja Terapis:** Statistik kontribusi porsi pelayanan dan total pendapatan per terapis.
+    4. **Laporan Kegiatan Klinik:** Grafik persentase kontribusi layanan klinik terpopuler.
+    5. **Laporan Komparatif Performa:** Visualisasi kontribusi porsi pengerjaan sesi antar terapis (akses eksklusif untuk Super Admin).
+  * **Low-Memory PDF Downloader:** Menggunakan anotasi `@Streaming` pada Retrofit untuk mengunduh berkas PDF berukuran besar sebagai byte stream bertahap, mencegah error *Out of Memory (OOM)* pada HP.
+  * **Penyimpanan Lokal MediaStore API:** Menggunakan utility `PdfGenerator` berbasis Android `MediaStore` untuk mencetak dan menulis file PDF secara lokal ke direktori aman `/Downloads/MannaWaSalwa/`.
+
+### 4. Notifikasi FCM & Background Service
+* **Notifikasi Instan Real-time:**
+  * Integrasi Firebase Cloud Messaging (FCM) untuk memicu notifikasi push saat ada status transaksi berubah (misal: booking terkonfirmasi, bukti bayar ditolak, rekam medis diisi).
+* **Navigasi Pintas Notifikasi (Deep Linking):**
+  * Ketika pengguna mengetuk notifikasi sistem, aplikasi akan otomatis terbuka dan melakukan pengalihan rute (intent redirect) langsung ke halaman detail transaksi yang bersangkutan.
 
 ---
 
