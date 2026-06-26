@@ -10,52 +10,33 @@ Repositori ini berisi kode sumber aplikasi mobile client untuk sistem manajemen 
 ## 📱 Tentang Aplikasi
 Aplikasi **Rumah Sehat Manna wa Salwa** dirancang untuk memudahkan pasien melakukan reservasi terapi secara mandiri, memudahkan terapis mengelola agenda praktik & menulis rekam medis, serta memfasilitasi admin dalam memverifikasi transaksi dan menyusun laporan operasional klinik secara terintegrasi.
 
-## 🚀 Fitur Utama Aplikasi (Berdasarkan Modul)
+## ✨ Fitur Utama
 
-Aplikasi mobile **Rumah Sehat Manna wa Salwa** mengimplementasikan seluruh fitur utama yang terbagi ke dalam 5 modul fungsional sesuai dengan dokumentasi resmi proyek:
+### 👤 Pasien
+- Registrasi & login akun (Email/Password atau Google Sign-In)
+- Booking terapi mandiri — pilih layanan, terapis, tanggal, dan jam
+- Dua metode pembayaran: **Tunai** atau **Transfer Bank** (upload foto bukti bayar)
+- Countdown timer 24 jam untuk batas waktu upload bukti transfer
+- Nomor antrean hari ini secara real-time (per terapis)
+- Lihat riwayat rekam medis & catatan diagnosa dari terapis secara kronologis
 
-### Modul 1: Autentikasi & Manajemen Akun (M-01)
-* **Registrasi Akun Mandiri:** Form pendaftaran pasien baru secara daring dengan validasi data nomor handphone, format email, dan batas keamanan sandi (8-64 karakter sesuai standar OWASP).
-* **Login Multi-Metode:** Dukungan login konvensional (Email & Password) serta login sekali ketuk menggunakan **Google Sign-In** terintegrasi Firebase Auth.
-* **Penyimpanan Sesi Aman:** Fitur masuk otomatis (*auto-login*) yang menjaga status autentikasi aktif menggunakan penyimpanan data lokal terenkripsi via `UserPreference`.
-* **Manajemen Profil:** Pengguna dapat memperbarui foto profil (disertai fitur potong gambar menggunakan *Android-Image-Cropper*), mengubah informasi kontak (No. HP hanya menerima input angka), alamat, pekerjaan, serta memperbarui kata sandi secara aman.
-* **Fokus Otomatis Form (Android):** Sistem navigasi input pintar yang memindahkan fokus kursor secara otomatis ke baris input pertama yang kosong/mengalami error validasi.
-* **Manajemen Pengguna (Admin & Super Admin Screen):** 
-  * Layar `AdminManageUsersScreen` untuk melihat daftar seluruh pengguna secara alfabetis (A-Z).
-  * Membuat akun Pasien dan Terapis baru secara manual.
-  * Tab visual data aktif dan data terhapus (*Trash* / *Soft Deleted*) beserta tombol *Restore* untuk memulihkan akun.
+### 👨‍⚕️ Terapis
+- Dashboard ringkasan total sesi bulan ini & daftar agenda hari ini
+- Mulai sesi terapi & isi formulir rekam medis pasien (keluhan, diagnosa, tindakan)
+- Isi catatan rekam medis susulan untuk sesi yang diselesaikan paksa oleh admin
+- Kelola jadwal mingguan praktik & tandai hari libur/cuti
+- Tutup Darurat (*Emergency Close*) — batalkan seluruh antrean hari ini sekarang
+- Lihat laporan kunjungan & performa bulanan pribadi
+- Hubungi pasien via WhatsApp langsung dari detail booking
 
-### Modul 2: Reservasi Terapi & Pengelolaan Transaksi (M-02)
-* **Booking Layanan Terapi (Oleh Pasien):** Pemilihan layanan terapi medis beserta terapis yang diinginkan melalui kalender slot waktu operasional terapis yang diperbarui secara dinamis.
-* **Pemisahan Alur Pembayaran:**
-  * **Metode Tunai (Cash):** Booking langsung dibuat dengan status pembayaran awal *unpaid*, dan janji temu divalidasi oleh admin untuk dijadwalkan (lunas saat pasien hadir di klinik).
-  * **Metode Transfer Bank:** Sistem memberikan batas waktu transfer (24 jam dengan countdown timer interaktif). Pasien wajib mengunggah foto bukti transfer bank melalui aplikasi.
-* **Verifikasi Pembayaran & Antrean Dinamis:**
-  * Halaman admin untuk memvalidasi bukti pembayaran transfer (terima untuk mengubah status transaksi menjadi *paid*, booking terkonfirmasi (*confirmed*), atau tolak dengan mencantumkan alasan penolakan).
-  * Komponen visual `QueueInfoCard` premium (berwarna *GreenPrimary* dan *GreenSoft*) untuk menampilkan nomor urut antrean harian pasien secara real-time.
-* **Pencegahan Bentrok Jadwal (Double Booking Prevention):** Validasi ketat di sisi UI untuk mencegah pemesanan ganda di waktu yang sama bagi pasien dan terapis.
-* **Pengelolaan Operasional (Terapis):**
-  * Terapis dapat mengatur jadwal mingguan rutin mereka sendiri langsung dari aplikasi.
-  * Fitur penandaan Hari Libur/Cuti Terapis untuk mengunci tanggal tertentu di kalender pasien.
-  * Prosedur **Emergency Close (Tutup Darurat)** bagi terapis untuk membatalkan seluruh antrean aktif hari ini dan mengunci sisa slot secara instan saat kondisi mendesak.
-* **Integrasi Komunikasi WhatsApp:** Akses instan menghubungi admin klinik (untuk pasien) atau pasien (untuk terapis) dengan tombol bantu mengambang (FAB) yang menggunakan *Implicit Intent* untuk otomatis menyusun draf pesan teks detail janji temu ke aplikasi WhatsApp.
-
-### Modul 3: Rekam Medis Digital (M-03)
-* **Pencatatan Klinis Terapis:** Terapis mengisi keluhan pasien, diagnosis, tindakan terapi yang diberikan (bekam/akupunktur/ramuan), dan catatan tambahan medis saat menyelesaikan layanan terapi. Pengisian catatan ini secara otomatis mengubah status janji temu menjadi *completed* (selesai).
-* **Catatan Medis Susulan:** Memungkinkan pengisian catatan medis untuk janji temu yang ditutup sepihak oleh admin (*force completed*). Janji temu ini tetap muncul pada riwayat terapis dan dilengkapi tombol **"Isi Catatan Terapi"** agar terapis dapat menginput rekam medis susulan.
-* **Riwayat Rekam Medis Pasien:** Halaman riwayat medis kronologis (*Timeline UI*) yang menyajikan riwayat pengobatan dan detail rekam medis dari kunjungan-kunjungan sebelumnya secara lengkap.
-* **Filter Riwayat Medis:** Penyaringan catatan medis lama berdasarkan jenis layanan terapi yang pernah diambil.
-
-### Modul 4: Notifikasi & Komunikasi Real-time (M-04)
-* **Push Notification Firebase:** Notifikasi lokal instan di handphone pengguna untuk status pembayaran dikonfirmasi/ditolak, pembatalan janji temu, dan pembaruan status layanan terapis.
-* **Deep-Link Navigation:** Menekan notifikasi di ponsel akan langsung mengarahkan pengguna secara presisi ke halaman detail janji temu yang bersangkutan di aplikasi Android berdasarkan peran pengguna (Pasien atau Terapis).
-
-### Modul 5: Modul Laporan & Analitik Keuangan (M-05)
-* **Laporan Keuangan & Tren Kunjungan:** Tampilan grafik kontribusi persentase pendapatan dan kemajuan bulanan di halaman `ReportScreen`.
-* **Analisis Kinerja Terapis:** Metrik penilai produktivitas (jumlah sesi pelayanan) bagi masing-masing terapis.
-* **Ekspor Laporan PDF:** 
-  * Konfigurasi Retrofit `@Streaming` untuk mengunduh berkas laporan PDF berukuran besar dari server sebagai byte stream bertahap, mencegah error *Out of Memory (OOM)* pada HP.
-  * Integrasi utility `PdfGenerator` berbasis Android `MediaStore` API untuk menulis berkas PDF laporan secara lokal ke direktori aman `/Downloads/MannaWaSalwa/`.
+### 🛡️ Admin / Super Admin
+- Booking terapi langsung atas nama pasien (otomatis terkonfirmasi)
+- Verifikasi atau tolak bukti transfer bank pasien (disertai catatan alasan penolakan)
+- Force Complete sesi yang terlewat ditutup oleh terapis
+- Kelola katalog layanan klinik (tambah, edit, nonaktifkan)
+- Kelola daftar pengguna — tambah akun baru, nonaktifkan, atau restore akun dari trash
+- Ekspor laporan PDF bulanan: Keuangan, Kunjungan Terapis, Kinerja, & Kegiatan Klinik
+- Laporan komparatif performa antar terapis *(khusus Super Admin)*
 
 ---
 
