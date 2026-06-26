@@ -1,222 +1,85 @@
-# Rumah Sehat Manna wa Salwa — Proses Bisnis & Integrasi Sistem
+# Rumah Sehat Manna wa Salwa — Aplikasi Android (Client App)
 
-Dokumen ini berisi pemetaan alur kerja (End-to-End) sistem Rumah Sehat Manna wa Salwa, mulai dari aplikasi Mobile (Android Kotlin) hingga Backend (Laravel API). Dokumentasi ini disusun untuk mempermudah pemahaman logika program dalam tesis.
+[![Status](https://img.shields.io/badge/Status-Prototype%20%E2%80%94%20Local%20Only-orange)](#)
+[![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
----
-
-## 1. Autentikasi dan Manajemen Sesi
-**Alur:** Validasi Firebase → Sinkronisasi UID ke Backend → Pemberian Token Sanctum.
-
-### Mobile (AuthRepository.kt)
-```kotlin
-suspend fun login(email: String, pass: String): ApiResult<User> {
-    val authResult = firebaseAuth.signInWithEmailAndPassword(email, pass).await()
-    val idToken = authResult.user?.getIdToken(false)?.await()?.token
-    return apiService.syncFirebase(mapOf("id_token" to idToken))
-}
-```
-
-### API Interface (ApiService.kt)
-```kotlin
-@POST("user/sync-firebase")
-suspend fun syncFirebase(@Body request: Map<String, String>): Response<UserResponse>
-```
-
-### Backend (AuthController.php)
-```php
-public function syncFirebase(Request $request) {
-    $verifiedIdToken = $this->firebaseAuth->verifyIdToken($request->id_token);
-    $uid = $verifiedIdToken->claims()->get('sub');
-    $user = User::where('firebase_uid', $uid)->firstOrFail();
-    $token = $user->createToken('authToken')->plainTextToken;
-    return ResponseFormatter::success(['user' => $user, 'access_token' => $token]);
-}
-```
+Repositori ini berisi kode sumber aplikasi mobile client untuk sistem manajemen dan booking janji temu klinik **Rumah Sehat Manna wa Salwa**. Aplikasi ini dibuat menggunakan bahasa pemrograman Kotlin dengan arsitektur UI modern Jetpack Compose.
 
 ---
 
-## 2. Manajemen Layanan (Master Data)
-**Alur:** Pengambilan daftar layanan untuk ditampilkan di katalog pasien.
-
-### Mobile (ServiceRepository.kt)
-```kotlin
-suspend fun getServiceList(): ApiResult<List<Service>> {
-    val response = apiService.getServices(page = 1, limit = 100)
-    return ApiResult.Success(response.body()!!.data.data)
-}
-```
-
-### API Interface (ApiService.kt)
-```kotlin
-@GET("services")
-suspend fun getServices(@Query("page") page: Int): Response<ServiceResponse>
-```
-
-### Backend (ServiceController.php)
-```php
-public function all(Request $request) {
-    $service = Service::query();
-    return ResponseFormatter::success($service->paginate($request->limit));
-}
-```
+## 📱 Tentang Aplikasi
+Aplikasi **Rumah Sehat Manna wa Salwa** dirancang untuk memudahkan pasien melakukan reservasi terapi secara mandiri, memudahkan terapis mengelola agenda praktik & menulis rekam medis, serta memfasilitasi admin dalam memverifikasi transaksi dan menyusun laporan operasional klinik secara terintegrasi.
 
 ---
 
-## 3. Pengelolaan Jadwal Terapis
-**Alur:** Admin/Terapis mengatur jam operasional rutin.
+## 👥 Peran Pengguna & Fitur Utama
 
-### Mobile (AppointmentRepository.kt)
-```kotlin
-suspend fun getTherapistSchedule(id: Int): ApiResult<ProcessedSchedule> {
-    val response = apiService.getSchedules(id)
-    return ApiResult.Success(ScheduleMapper.map(response.body()!!.data))
-}
-```
+### 1. Pasien (Patient Role)
+* **Katalog Layanan:** Memilih jenis terapi yang aktif (Bekam, Akupunktur, Ramuan).
+* **Reservasi Jadwal (Booking):** Memilih terapis, tanggal, serta jam slot terapi yang kosong (slot waktu dihitung dinamis dari jadwal aktif terapis).
+* **Metode Pembayaran:** Mendukung pembayaran Tunai (Cash) dan Transfer Bank (dengan pengunggahan foto bukti transfer).
+* **Real-time Transfer Countdown:** Batas transfer 24 jam dengan timer hitung mundur interaktif untuk menghindari pembatalan otomatis.
+* **Antrean Dinamis:** Pasien mendapatkan nomor antrean hari berjalan per terapis secara dinamis berdasarkan jam booking (dan *tie-breaker created_at*).
+* **Rekam Terapi:** Melihat riwayat diagnosa dan tindakan terapis secara transparan setelah sesi diselesaikan.
 
-### API Interface (ApiService.kt)
-```kotlin
-@GET("schedules/{therapistId}")
-suspend fun getSchedules(@Path("therapistId") id: Int): Response<ApiResponse<List<Schedule>>>
-```
+### 2. Terapis (Therapist Role)
+* **Dashboard Statistik:** Menampilkan total sesi bulanan, sesi terjadwal, dan sesi berstatus "Belum Isi Catatan" (Force Completed oleh Admin).
+* **Agenda Hari Ini:** Daftar antrean pasien yang akan dilayani pada hari berjalan.
+* **Mulai Sesi:** Mengubah status janji temu menjadi "Sedang Berlangsung".
+* **Isi Rekam Medis:** Formulir pengisian diagnosa keluhan, tindakan yang diambil, dan catatan tambahan terapis untuk merampungkan janji temu menjadi "Selesai".
 
-### Backend (ScheduleController.php)
-```php
-public function updateSchedule(Request $request) {
-    $schedule = Schedule::updateOrCreate(
-        ['therapist_id' => $request->therapist_id, 'day' => $request->day],
-        ['start_time' => $request->start_time, 'end_time' => $request->end_time, 'is_active' => $request->is_active]
-    );
-    return ResponseFormatter::success($schedule);
-}
-```
+### 3. Admin / Super Admin (Management Role)
+* **Verifikasi Transaksi:** Memeriksa berkas bukti transfer pasien untuk menyetujui atau menolak (disertai pengisian alasan penolakan).
+* **Force Complete:** Menyelesaikan sesi janji temu yang terlewat ditutup oleh terapis agar pembayaran & status laporan terekam rapi.
+* **Ekspor Laporan PDF:** Menghasilkan laporan berformat PDF standar A4 Landscape:
+  1. *Laporan Keuangan* (Pendapatan riil tunai/transfer, refund).
+  2. *Laporan Kunjungan Terapis* (Hardcoded detail alamat klinik, penutupan STPT, total pasien L/P).
+  3. *Laporan Kinerja Terapis* (Sesi & pendapatan terapis).
+  4. *Laporan Kegiatan Klinik* (Layanan terpopuler, grafik sesi).
+  5. *Laporan Komparatif Terapis* (Khusus Super Admin - visualisasi grafik kontribusi sesi terapis).
 
 ---
 
-## 4. Proses Transaksi Janji Temu (Booking)
-**Alur:** Pemilihan jadwal → Upload bukti transfer → Validasi Admin.
-
-### Mobile (AppointmentRepository.kt)
-```kotlin
-suspend fun createAppointment(params: CreateAppointment): ApiResult<Int> {
-    val requestMap = buildRequestMap(params)
-    val imagePart = prepareImage(params.proofUri)
-    return apiService.createAppointment(requestMap, imagePart)
-}
-```
-
-### API Interface (ApiService.kt)
-```kotlin
-@Multipart @POST("bookings")
-suspend fun createAppointment(@PartMap d: Map<String, RequestBody>, @Part p: MultipartBody.Part?): Response<BookingCreateResponse>
-```
-
-### Backend (BookingController.php)
-```php
-public function store(StoreBookingRequest $request) {
-    return DB::transaction(function () use ($request) {
-        $booking = Booking::create($request->all());
-        $proofPath = $request->file('proof_of_transfer')->store('proofs', 'public');
-        Transaction::create(['booking_id' => $booking->id, 'proof_of_transfer' => $proofPath]);
-        return ResponseFormatter::success($booking);
-    });
-}
-```
+## 🛠️ Tech Stack
+* **UI Framework:** Jetpack Compose (Kotlin)
+* **Design System:** Material Design 3
+* **Network Client:** Retrofit 2 & OkHttp3 (dengan Logging Interceptor & Streaming byte downloads)
+* **Asynchronous Flow:** Kotlin Coroutines & SharedFlow / StateFlow
+* **Real-time Sync:** Pusher Java Client & Pusher Websocket Channels
+* **Notifikasi:** Firebase Cloud Messaging (FCM) & Google Client Library
+* **Pagination:** Android Jetpack Paging 3
 
 ---
 
-## 5. Monitoring Janji Temu (List & Detail)
-**Alur:** Melihat riwayat janji temu aktif dan detail status pembayaran.
+## ⚙️ Setup & Langkah Menjalankan Lokal
 
-### Mobile (AppointmentRepository.kt)
-```kotlin
-fun getBookings(page: Int, status: String?): Flow<ApiResult<List<BookingListItem>>> = flow {
-    val response = apiService.getBookings(page = page, status = status)
-    emit(ApiResult.Success(response.data.data))
-}
+### 1. Prasyarat Lingkungan
+* **Android Studio** (Versi Ladybug 2024.2.1 atau lebih baru)
+* **Java Development Kit (JDK):** JDK 17
+* **HP Android / Emulator:** Target API Level 26 (Android 8.0) ke atas.
 
-fun fetchAppointmentDetail(id: Int) = flow {
-    val response = apiService.getBookingDetail(id)
-    emit(ApiResult.Success(response))
-}
-```
+### 2. Hubungkan ke Server API Backend (PENTING)
+Aplikasi Android ini memerlukan server backend lokal yang aktif. 
+1. Pastikan komputer backend Anda dan HP/Emulator berada dalam **satu jaringan Wi-Fi lokal yang sama**.
+2. Cari tahu alamat IP lokal PC/Laptop Anda (misal `192.168.1.5`).
+3. Buka proyek Android ini di Android Studio.
+4. Buka file [app/build.gradle.kts](file:///g:/Coding/Rumah%20Sehat%20Manna%20wa%20Salwa/Android/rumahsehatmannawasalwa/app/build.gradle.kts#L24).
+5. Ubah baris konfigurasi `BASE_URL` sesuai dengan IP PC/Laptop Anda:
+   ```kotlin
+   buildConfigField("String", "BASE_URL", "\"http://<IP_KOMPUTER_ANDA>:8000/api/\"")
+   ```
+6. Sinkronkan Gradle (*Sync Project with Gradle Files*).
 
-### API Interface (ApiService.kt)
-```kotlin
-@GET("bookings")
-suspend fun getBookings(@Query("page") p: Int, @Query("status") s: String?): BookingListResponse
-
-@GET("bookings/{id}")
-suspend fun getBookingDetail(@Path("id") id: Int): DetailAppointmentResponse
-```
-
-### Backend (BookingController.php)
-```php
-public function all(Request $request) {
-    $user = Auth::user();
-    $booking = Booking::with(['service', 'patient', 'transaction']);
-    if ($user->role === 'pasien') $booking->where('patient_id', $user->id);
-    return ResponseFormatter::success($booking->paginate($request->limit));
-}
-
-public function show($id) {
-    $booking = Booking::with(['patient', 'therapist', 'service', 'transaction']).find($id);
-    return ResponseFormatter::success($booking);
-}
-```
+### 3. Build & Jalankan Aplikasi
+* Ketuk tombol **Run 'app'** di Android Studio untuk memasang dan menjalankan aplikasi ke HP Android / Emulator Anda secara langsung.
+* Atau, jika ingin membuat file installer APK secara mandiri, jalankan perintah di terminal Android Studio:
+  ```bash
+  .\gradlew.bat assembleDebug
+  ```
+  File APK akan ter-generate di folder: `app/build/outputs/apk/debug/app-debug.apk`.
 
 ---
 
-## 6. Pencatatan dan Riwayat Rekam Medis
-**Alur:** Input hasil terapi → Akses riwayat kesehatan pasien.
-
-### Mobile (TherapyRecordRepository.kt)
-```kotlin
-fun createTherapyRecord(req: TherapyRecordRequest) = flow {
-    val response = apiService.createTherapyRecord(req)
-    emit(ApiResult.Success(response.body()!!.data))
-}
-
-fun getTherapyRecords(patientId: Int?) = Pager(config = PagingConfig(10)) {
-    TherapyRecordPagingSource(apiService, patientId)
-}.flow
-```
-
-### API Interface (ApiService.kt)
-```kotlin
-@POST("therapy-records")
-suspend fun createTherapyRecord(@Body r: TherapyRecordRequest): Response<TherapyRecordDetailResponse>
-
-@GET("therapy-records")
-suspend fun getTherapyRecords(@Query("patient_id") id: Int?, @Query("page") p: Int): TherapyRecordListResponse
-```
-
-### Backend (TherapyRecordController.php)
-```php
-public function all(Request $request) {
-    $query = TherapyRecord::with(['patient', 'therapist', 'booking.service']);
-    if (Auth::user()->role === 'pasien') $query->where('patient_id', Auth::id());
-    return ResponseFormatter::success($query->paginate($request->limit));
-}
-```
-
----
-
-## 7. Integrasi Notifikasi (FCM)
-**Alur:** Device Token registration → Event-driven notification.
-
-### Mobile (AuthRepository.kt)
-```kotlin
-suspend fun updateFcmToken(token: String) {
-    apiService.updateFcmToken(UpdateFcmTokenRequest(token))
-}
-```
-
-### Backend (Listener & Service)
-```php
-// SendFcmNotification.php
-public function handle(BookingStatusUpdated $event) {
-    if ($event->booking->status === 'confirmed') {
-        FcmService::send($event->booking->patient->fcm_token, "Janji Temu Dikonfirmasi! ✅", "Jadwal Anda telah disetujui.");
-    }
-}
-```
+## 🔗 Link Repositori Terkait
+* **Laravel Backend API Server:** [rumah-sehat-manna-wa-salwa-back-end](https://github.com/aab-dii/rumah-sehat-manna-wa-salwa-back-end)
+* **Unduh Rilis Installer APK:** Buka tab **[Releases](https://github.com/aab-dii/rumah-sehat-manna-wa-salwa/releases)** di sebelah kanan repositori ini untuk mengunduh berkas APK siap pakai (`v1.0.0-prototype`).

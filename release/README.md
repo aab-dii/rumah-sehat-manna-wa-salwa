@@ -7,7 +7,7 @@ Selamat datang di repositori rilis aplikasi mobile **Rumah Sehat Manna wa Salwa*
 ## 📱 Unduh Aplikasi
 File installer APK dapat langsung diunduh melalui repositori ini:
 * **File APK:** [rumah-sehat-manna-wa-salwa.apk](rumah-sehat-manna-wa-salwa.apk)
-* **Versi Rilis:** v1.0-Debug
+* **Versi Rilis:** v1.0.0-prototype
 * **Target Android SDK:** Android 8.0 (API Level 26) ke atas
 
 ---
@@ -17,50 +17,6 @@ File installer APK dapat langsung diunduh melalui repositori ini:
 2. Buka file manager di HP, lalu ketuk file APK tersebut untuk memulai instalasi.
 3. Jika muncul peringatan keamanan sistem, masuk ke **Pengaturan** HP Anda lalu aktifkan opsi **"Izinkan Instalasi dari Sumber Tidak Dikenal"** (*Allow installation from Unknown Sources*).
 4. Selesaikan proses instalasi hingga aplikasi berhasil terpasang di HP Anda.
-
----
-
-## 🖥️ Persiapan & Instalasi Server Backend (Laravel API)
-
-Aplikasi Android ini bergantung pada backend server Laravel API untuk memproses data transaksi, mengelola jadwal antrian, dan memicu notifikasi.
-
-Sebelum menjalankan aplikasi Android, Anda harus terlebih dahulu mengunduh, mengonfigurasi, dan menjalankan proyek backend:
-
-### 1. Unduh / Clone Repositori Backend
-Dapatkan kode sumber backend dari repositori resmi di GitHub:
-* **Repositori Backend:** [rumah-sehat-manna-wa-salwa-back-end](https://github.com/aab-dii/rumah-sehat-manna-wa-salwa-back-end)
-* Perintah untuk mengkloning:
-  ```bash
-  git clone https://github.com/aab-dii/rumah-sehat-manna-wa-salwa-back-end.git
-  ```
-
-### 2. Langkah Konfigurasi Backend (Lokal)
-Masuk ke direktori backend yang baru saja di-clone, lalu jalankan langkah-langkah setup berikut:
-1. **Instalasi Dependencies:**
-   ```bash
-   composer install
-   npm install && npm run build
-   ```
-2. **Konfigurasi Environment File:**
-   Salin file konfigurasi environment `.env.example` menjadi `.env`:
-   ```bash
-   copy .env.example .env
-   ```
-   Atur koneksi database (MySQL/SQLite) dan konfigurasi pihak ketiga (Pusher & Firebase Credentials) di file `.env`.
-3. **Generate Application Key:**
-   ```bash
-   php artisan key:generate
-   ```
-4. **Migrasi & Seeding Database:**
-   Buat struktur tabel database dan masukkan data uji coba awal (termasuk user demo):
-   ```bash
-   php artisan migrate:fresh --seed
-   ```
-5. **Menjalankan Server:**
-   Jalankan server API lokal Anda agar dapat diakses oleh HP Android dalam jaringan Wi-Fi yang sama:
-   ```bash
-   php artisan serve --host=0.0.0.0 --port=8000
-   ```
 
 ---
 
