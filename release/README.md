@@ -20,6 +20,50 @@ File installer APK dapat langsung diunduh melalui repositori ini:
 
 ---
 
+## 🖥️ Persiapan & Instalasi Server Backend (Laravel API)
+
+Aplikasi Android ini bergantung pada backend server Laravel API untuk memproses data transaksi, mengelola jadwal antrian, dan memicu notifikasi.
+
+Sebelum menjalankan aplikasi Android, Anda harus terlebih dahulu mengunduh, mengonfigurasi, dan menjalankan proyek backend:
+
+### 1. Unduh / Clone Repositori Backend
+Dapatkan kode sumber backend dari repositori resmi di GitHub:
+* **Repositori Backend:** [rumah-sehat-manna-wa-salwa-back-end](https://github.com/aab-dii/rumah-sehat-manna-wa-salwa-back-end)
+* Perintah untuk mengkloning:
+  ```bash
+  git clone https://github.com/aab-dii/rumah-sehat-manna-wa-salwa-back-end.git
+  ```
+
+### 2. Langkah Konfigurasi Backend (Lokal)
+Masuk ke direktori backend yang baru saja di-clone, lalu jalankan langkah-langkah setup berikut:
+1. **Instalasi Dependencies:**
+   ```bash
+   composer install
+   npm install && npm run build
+   ```
+2. **Konfigurasi Environment File:**
+   Salin file konfigurasi environment `.env.example` menjadi `.env`:
+   ```bash
+   copy .env.example .env
+   ```
+   Atur koneksi database (MySQL/SQLite) dan konfigurasi pihak ketiga (Pusher & Firebase Credentials) di file `.env`.
+3. **Generate Application Key:**
+   ```bash
+   php artisan key:generate
+   ```
+4. **Migrasi & Seeding Database:**
+   Buat struktur tabel database dan masukkan data uji coba awal (termasuk user demo):
+   ```bash
+   php artisan migrate:fresh --seed
+   ```
+5. **Menjalankan Server:**
+   Jalankan server API lokal Anda agar dapat diakses oleh HP Android dalam jaringan Wi-Fi yang sama:
+   ```bash
+   php artisan serve --host=0.0.0.0 --port=8000
+   ```
+
+---
+
 ## 🔗 Konfigurasi Jaringan & Koneksi Backend (PENTING untuk Sidang)
 Aplikasi mobile ini berkomunikasi dengan Laravel Backend API menggunakan jaringan lokal nirkabel (Wi-Fi). 
 

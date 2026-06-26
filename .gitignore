@@ -17,3 +17,4 @@ google-services.json
 *.jks
 *.keystore
 key.properties
+/SPRINT_REPORT_MASTER.md
