@@ -10,82 +10,71 @@ Repositori ini berisi kode sumber aplikasi mobile client untuk sistem manajemen 
 ## 📱 Tentang Aplikasi
 Aplikasi **Rumah Sehat Manna wa Salwa** dirancang untuk memudahkan pasien melakukan reservasi terapi secara mandiri, memudahkan terapis mengelola agenda praktik & menulis rekam medis, serta memfasilitasi admin dalam memverifikasi transaksi dan menyusun laporan operasional klinik secara terintegrasi.
 
----
+## 🚀 Fitur Utama Aplikasi (Berdasarkan Modul)
 
-## 👥 Detail Fitur Utama Aplikasi
-Berikut adalah rincian fungsionalitas dan fitur teknis lengkap yang telah diimplementasikan dalam aplikasi Android berdasarkan pembagian peran (*role*):
+Aplikasi mobile **Rumah Sehat Manna wa Salwa** mengimplementasikan seluruh fitur utama yang terbagi ke dalam 5 modul fungsional sesuai dengan dokumentasi resmi proyek:
 
-### 1. Pasien (Patient Role)
-* **Katalog Layanan Klinik (Jetpack Compose):**
-  * Halaman katalog interaktif berbasis Compose untuk melihat jenis terapi yang aktif (Bekam, Akupunktur, Ramuan).
-  * Dilengkapi dengan estimasi durasi pelayanan, harga terperinci, dan ikon gambar dinamis yang dimuat dari server.
-* **Alur Reservasi Terpandu (Booking Flow):**
-  * Alur pembuatan janji temu langkah-demi-langkah (pilih layanan $\rightarrow$ pilih tanggal $\rightarrow$ pilih jam slot praktik $\rightarrow$ pilih terapis tersedia).
-  * Filter jadwal dinamis untuk memastikan tidak ada slot waktu ganda pada terapis yang sama.
-* **Metode Pembayaran & Unggah Berkas:**
-  * Pilihan metode pembayaran **Tunai (Cash)** atau **Transfer Bank**.
-  * Pengintegrasian *System Image Picker* untuk memilih berkas bukti bayar dan mengirimkannya menggunakan `MultipartBody.Part` via Retrofit.
-* **Real-time Transfer Countdown (Batas Waktu Pembayaran):**
-  * Hitung mundur interaktif selama 24 jam khusus untuk metode transfer bank.
-  * Proteksi logika visual: countdown hanya berjalan pada transaksi berstatus `pending/unpaid` dengan metode transfer, memastikan transaksi tunai atau yang sudah terkonfirmasi tidak mengalami kesalahan visual pembatalan.
-* **Kartu Informasi Antrean Dinamis (`QueueInfoCard`):**
-  * Komponen visual premium berwarna *GreenPrimary* dan *GreenSoft* yang menampilkan nomor antrean hari berjalan pasien secara real-time.
-  * Nomor antrean dihitung dinamis per hari per terapis dengan logika pengurutan `booking_time` (dan *tie-breaker* `created_at` jika jam booking sama).
-* **Riwayat Rekam Terapi Kronologis (Timeline):**
-  * Tampilan rekam medis pribadi pasien dalam bentuk linimasa (timeline) yang rapi.
-  * Pasien dapat melacak perkembangan keluhan, diagnosis terapis, titik bekam yang dipasang, serta ramuan herbal yang diresepkan dari waktu ke waktu.
+### Modul 1: Autentikasi & Manajemen Akun (M-01)
+* **Registrasi Akun Mandiri:** Form pendaftaran pasien baru secara daring dengan validasi data nomor handphone, format email, dan batas keamanan sandi (8-64 karakter sesuai standar OWASP).
+* **Login Multi-Metode:** Dukungan login konvensional (Email & Password) serta login sekali ketuk menggunakan **Google Sign-In** terintegrasi Firebase Auth.
+* **Penyimpanan Sesi Aman:** Fitur masuk otomatis (*auto-login*) yang menjaga status autentikasi aktif menggunakan penyimpanan data lokal terenkripsi via `UserPreference`.
+* **Manajemen Profil:** Pengguna dapat memperbarui foto profil (disertai fitur potong gambar menggunakan *Android-Image-Cropper*), mengubah informasi kontak (No. HP hanya menerima input angka), alamat, pekerjaan, serta memperbarui kata sandi secara aman.
+* **Fokus Otomatis Form (Android):** Sistem navigasi input pintar yang memindahkan fokus kursor secara otomatis ke baris input pertama yang kosong/mengalami error validasi.
+* **Manajemen Pengguna (Admin & Super Admin Screen):** 
+  * Layar `AdminManageUsersScreen` untuk melihat daftar seluruh pengguna secara alfabetis (A-Z).
+  * Membuat akun Pasien dan Terapis baru secara manual.
+  * Tab visual data aktif dan data terhapus (*Trash* / *Soft Deleted*) beserta tombol *Restore* untuk memulihkan akun.
 
-### 2. Terapis (Therapist Role)
-* **Dashboard Statistik Terapis:**
-  * Kartu indikator performa untuk memantau total sesi terapi yang telah dilayani bulan ini.
-  * Indikator janji temu mendatang yang terjadwal.
-  * Indikator peringatan khusus untuk sesi yang berstatus **"Belum Isi Catatan"** (akibat tindakan *Force Complete* oleh admin).
-* **Agenda Hari Ini & Manajemen Sesi:**
-  * Menampilkan daftar antrean pasien secara berurutan sesuai jam pelayanan hari berjalan.
-  * Tombol aksi **"Mulai Sesi"** untuk memperbarui status transaksi menjadi `in_progress`.
-* **Formulir Rekam Terapi (`TherapyRecordFormScreen`):**
-  * Formulir pengisian rekam medis terstruktur: keluhan utama, diagnosis klinis, titik bekam (jika memilih bekam), ramuan herbal yang diresepkan, dan catatan evaluasi terapis.
-* **Penanganan Transaksi Force Completed (Pengisian Catatan Riwayat):**
-  * Menyelesaikan masalah transaksi yang dipaksa selesai oleh admin (*Force Completed*).
-  * Janji temu ini tetap muncul pada daftar riwayat terapis dengan status khusus. Terapis wajib mengisi rekam medis dengan menekan tombol **"Isi Catatan Terapi"** langsung dari kartu riwayat janji temu tersebut agar data rekam medis pasien tetap lengkap dan akurat.
+### Modul 2: Reservasi Terapi & Pengelolaan Transaksi (M-02)
+* **Booking Layanan Terapi (Oleh Pasien):** Pemilihan layanan terapi medis beserta terapis yang diinginkan melalui kalender slot waktu operasional terapis yang diperbarui secara dinamis.
+* **Pemisahan Alur Pembayaran:**
+  * **Metode Tunai (Cash):** Booking langsung dibuat dengan status pembayaran awal *unpaid*, dan janji temu divalidasi oleh admin untuk dijadwalkan (lunas saat pasien hadir di klinik).
+  * **Metode Transfer Bank:** Sistem memberikan batas waktu transfer (24 jam dengan countdown timer interaktif). Pasien wajib mengunggah foto bukti transfer bank melalui aplikasi.
+* **Verifikasi Pembayaran & Antrean Dinamis:**
+  * Halaman admin untuk memvalidasi bukti pembayaran transfer (terima untuk mengubah status transaksi menjadi *paid*, booking terkonfirmasi (*confirmed*), atau tolak dengan mencantumkan alasan penolakan).
+  * Komponen visual `QueueInfoCard` premium (berwarna *GreenPrimary* dan *GreenSoft*) untuk menampilkan nomor urut antrean harian pasien secara real-time.
+* **Pencegahan Bentrok Jadwal (Double Booking Prevention):** Validasi ketat di sisi UI untuk mencegah pemesanan ganda di waktu yang sama bagi pasien dan terapis.
+* **Pengelolaan Operasional (Terapis):**
+  * Terapis dapat mengatur jadwal mingguan rutin mereka sendiri langsung dari aplikasi.
+  * Fitur penandaan Hari Libur/Cuti Terapis untuk mengunci tanggal tertentu di kalender pasien.
+  * Prosedur **Emergency Close (Tutup Darurat)** bagi terapis untuk membatalkan seluruh antrean aktif hari ini dan mengunci sisa slot secara instan saat kondisi mendesak.
+* **Integrasi Komunikasi WhatsApp:** Akses instan menghubungi admin klinik (untuk pasien) atau pasien (untuk terapis) dengan tombol bantu mengambang (FAB) yang menggunakan *Implicit Intent* untuk otomatis menyusun draf pesan teks detail janji temu ke aplikasi WhatsApp.
 
-### 3. Admin / Super Admin (Management Role)
-* **Manajemen Pengguna (User Management Screen):**
-  * CRUD data pengguna untuk peran Pasien, Terapis, dan Admin melalui antarmuka `AdminManageUsersScreen`.
-  * Filter tab untuk memisahkan data pengguna aktif dan pengguna yang dinonaktifkan (berada di keranjang sampah / *Trash*).
-  * Tombol **Restore** untuk memulihkan kembali akun dari trash ke status aktif.
-  * Form pembuatan dan penyuntingan akun terapis baru dengan dropdown terapis dinamis.
-* **Verifikasi Transaksi Pembayaran:**
-  * Layar verifikasi khusus untuk memeriksa detail pemesanan dan berkas foto bukti transfer yang diunggah pasien.
-  * Aksi persetujuan (**Accept**) untuk mengubah status menjadi `confirmed` atau penolakan (**Reject**) disertai formulir pengisian alasan penolakan yang akan dikirim ke pasien.
-* **Force Complete:**
-  * Tombol darurat untuk menyelesaikan transaksi secara paksa jika terapis lupa menutup sesi janji temu, guna mengunci data transaksi dan laporan keuangan.
-* **Multi-Tab Ekspor Laporan & Cetak PDF:**
-  * Halaman laporan interaktif (`ReportScreen`) dengan tab terpisah untuk:
-    1. **Laporan Keuangan:** Rekapitulasi pendapatan tunai, transfer, dan refund.
-    2. **Laporan Kunjungan Terapis:** Menampilkan kunjungan pasien dengan detail alamat klinik, STPT (Surat Terdaftar Penyehat Tradisional), dan filter gender (L/P).
-    3. **Laporan Kinerja Terapis:** Statistik kontribusi porsi pelayanan dan total pendapatan per terapis.
-    4. **Laporan Kegiatan Klinik:** Grafik persentase kontribusi layanan klinik terpopuler.
-    5. **Laporan Komparatif Performa:** Visualisasi kontribusi porsi pengerjaan sesi antar terapis (akses eksklusif untuk Super Admin).
-  * **Low-Memory PDF Downloader:** Menggunakan anotasi `@Streaming` pada Retrofit untuk mengunduh berkas PDF berukuran besar sebagai byte stream bertahap, mencegah error *Out of Memory (OOM)* pada HP.
-  * **Penyimpanan Lokal MediaStore API:** Menggunakan utility `PdfGenerator` berbasis Android `MediaStore` untuk mencetak dan menulis file PDF secara lokal ke direktori aman `/Downloads/MannaWaSalwa/`.
+### Modul 3: Rekam Medis Digital (M-03)
+* **Pencatatan Klinis Terapis:** Terapis mengisi keluhan pasien, diagnosis, tindakan terapi yang diberikan (bekam/akupunktur/ramuan), dan catatan tambahan medis saat menyelesaikan layanan terapi. Pengisian catatan ini secara otomatis mengubah status janji temu menjadi *completed* (selesai).
+* **Catatan Medis Susulan:** Memungkinkan pengisian catatan medis untuk janji temu yang ditutup sepihak oleh admin (*force completed*). Janji temu ini tetap muncul pada riwayat terapis dan dilengkapi tombol **"Isi Catatan Terapi"** agar terapis dapat menginput rekam medis susulan.
+* **Riwayat Rekam Medis Pasien:** Halaman riwayat medis kronologis (*Timeline UI*) yang menyajikan riwayat pengobatan dan detail rekam medis dari kunjungan-kunjungan sebelumnya secara lengkap.
+* **Filter Riwayat Medis:** Penyaringan catatan medis lama berdasarkan jenis layanan terapi yang pernah diambil.
 
-### 4. Notifikasi FCM & Background Service
-* **Notifikasi Instan Real-time:**
-  * Integrasi Firebase Cloud Messaging (FCM) untuk memicu notifikasi push saat ada status transaksi berubah (misal: booking terkonfirmasi, bukti bayar ditolak, rekam medis diisi).
-* **Navigasi Pintas Notifikasi (Deep Linking):**
-  * Ketika pengguna mengetuk notifikasi sistem, aplikasi akan otomatis terbuka dan melakukan pengalihan rute (intent redirect) langsung ke halaman detail transaksi yang bersangkutan.
+### Modul 4: Notifikasi & Komunikasi Real-time (M-04)
+* **Push Notification Firebase:** Notifikasi lokal instan di handphone pengguna untuk status pembayaran dikonfirmasi/ditolak, pembatalan janji temu, dan pembaruan status layanan terapis.
+* **Deep-Link Navigation:** Menekan notifikasi di ponsel akan langsung mengarahkan pengguna secara presisi ke halaman detail janji temu yang bersangkutan di aplikasi Android berdasarkan peran pengguna (Pasien atau Terapis).
+
+### Modul 5: Modul Laporan & Analitik Keuangan (M-05)
+* **Laporan Keuangan & Tren Kunjungan:** Tampilan grafik kontribusi persentase pendapatan dan kemajuan bulanan di halaman `ReportScreen`.
+* **Analisis Kinerja Terapis:** Metrik penilai produktivitas (jumlah sesi pelayanan) bagi masing-masing terapis.
+* **Ekspor Laporan PDF:** 
+  * Konfigurasi Retrofit `@Streaming` untuk mengunduh berkas laporan PDF berukuran besar dari server sebagai byte stream bertahap, mencegah error *Out of Memory (OOM)* pada HP.
+  * Integrasi utility `PdfGenerator` berbasis Android `MediaStore` API untuk menulis berkas PDF laporan secara lokal ke direktori aman `/Downloads/MannaWaSalwa/`.
 
 ---
 
 ## 🛠️ Tech Stack
-* **UI Framework:** Jetpack Compose (Kotlin)
-* **Design System:** Material Design 3
-* **Network Client:** Retrofit 2 & OkHttp3 (dengan Logging Interceptor & Streaming byte downloads)
-* **Asynchronous Flow:** Kotlin Coroutines & SharedFlow / StateFlow
-* **Real-time Sync:** Pusher Java Client & Pusher Websocket Channels
-* **Notifikasi:** Firebase Cloud Messaging (FCM) & Google Client Library
-* **Pagination:** Android Jetpack Paging 3
+* **Bahasa Pemrograman:** Kotlin
+* **UI Framework:** Jetpack Compose (Modern Declarative UI)
+* **Desain & Styling:** Material Design 3 (M3) dengan kustomisasi tema dinamis dan komponen modular
+* **Manajemen Status (State Management):** ViewModel, StateFlow, LiveData
+* **Injeksi Dependensi (Dependency Injection):** Dagger Hilt (`hilt-navigation-compose`)
+* **Asynchronous & Threading:** Kotlin Coroutines & Flow (dengan penanganan pembatalan Job otomatis untuk mencegah race condition)
+* **Jaringan (Networking):** Retrofit 2 & OkHttp 3 (disertai `logging-interceptor`)
+* **Pemuatan Gambar:** Coil Compose (Image Loader)
+* **Notifikasi & Integrasi Cloud:**
+  * Firebase Cloud Messaging (FCM) untuk push notification real-time
+  * Firebase Authentication (untuk integrasi Google Sign-In)
+* **Utilitas Tambahan:**
+  * Android-Image-Cropper (untuk memotong foto bukti transfer/profil)
+  * Paging 3 (`paging-runtime-ktx` & `paging-compose` untuk pagination data)
+  * Implicit Intent untuk membuka aplikasi WhatsApp pihak ketiga secara langsung
 
 ---
 
